@@ -1,1 +1,8 @@
-# Describes an overall energy grid emulation scenario
+{
+  "scenarioName": "scen01",
+  "sitesAvailable": 
+  [ 
+    {"siteName": "site01", "siteCounter": 10 },
+    {"siteName": "site02", "siteCounter": 20 }
+  ]
+}

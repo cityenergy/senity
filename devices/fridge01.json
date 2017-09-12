@@ -1,1 +1,6 @@
-# provide data for the energy profile of a fridge
+{
+  "name" : "fridge01",
+  "type" : "fridge",
+  "avgConsumption": 350,
+  "workingCycle": 24
+}

@@ -1,0 +1,6 @@
+{
+  "name" : "dishwasher01",
+  "type" : "dishwasher",
+  "avgConsumption": 1200,
+  "workingCycle": 3
+}

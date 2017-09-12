@@ -1,0 +1,9 @@
+{ "siteName": "site01",
+  "devicesAvailable": 
+  [
+    {"deviceName": "oven01", "deviceCounter": 1},
+    {"deviceName": "fridge01", "deviceCounter": 1},
+    {"deviceName": "aircondition01", "deviceCounter": 3},
+    {"deviceName": "dishwasher01", "deviceCounter": 1}
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "name" : "aircondition01",
+  "type" : "aircondition",
+  "avgConsumption": 1100,
+  "workingCycle": 5 
+}

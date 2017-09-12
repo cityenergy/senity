@@ -1,0 +1,6 @@
+{
+  "name" : "oven01",
+  "type" : "oven",
+  "avgConsumption": 3000,
+  "workingCycle": 3
+}
