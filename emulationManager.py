@@ -2,9 +2,11 @@
 import getScenarioConf
 import getDeviceProfile
 import getSiteProfile
+import allInOneSite
 
 import sys
 import paho.mqtt.client as mqtt
+import multiprocessing
 
 # check that profiles and configuration data are valid and return ready format configuration to send to each site
 def validateFormatScenario (scenarioConf, allSites, allDevices) : 
@@ -21,7 +23,7 @@ def validateFormatScenario (scenarioConf, allSites, allDevices) :
                 sys.exit(0)
             sitesConf[site].append(allDevices[device])
 
-    print sitesConf
+    return sitesConf
 
 # input settings
 if len(sys.argv) != 5 :
@@ -46,6 +48,11 @@ scenarioConf = getScenarioConf.getScenarioConf(scenario_file)
 sitesConf = validateFormatScenario(scenarioConf, allSites, allDevices)
 
 # Create emulated "all in one" sites
+siteProcs = []
+for site in sitesConf.keys():
+    sp = multiprocessing.Process(target=allInOneSite.runSite, args=(mqtt_broker_ip, mqtt_broker_port))
+    siteProcs.append(sp)
+    sp.start()
 
 
 # Publish configurations for each site

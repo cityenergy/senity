@@ -1,0 +1,63 @@
+<html><head>
+<title>emulationManager.py</title>
+<meta name="Generator" content="htmlizer/[twisted, version 13.2.0]" />
+<link rel="alternate" href="emulationManager.py" type="text/x-python" />
+
+</head>
+<body>
+<pre><span class="py-src-comment"># The overall emulation Manager, which is responsible for starting and configuring the various entities</span>
+<span class="py-src-keyword">import</span> <span class="py-src-variable">getScenarioConf</span>
+<span class="py-src-keyword">import</span> <span class="py-src-variable">getDeviceProfile</span>
+<span class="py-src-keyword">import</span> <span class="py-src-variable">getSiteProfile</span>
+<span class="py-src-keyword">import</span> <span class="py-src-variable">allInOneSite</span>
+
+<span class="py-src-keyword">import</span> <span class="py-src-variable">sys</span>
+<span class="py-src-keyword">import</span> <span class="py-src-variable">paho</span>.<span class="py-src-variable">mqtt</span>.<span class="py-src-variable">client</span> <span class="py-src-keyword">as</span> <span class="py-src-variable">mqtt</span>
+<span class="py-src-keyword">import</span> <span class="py-src-variable">multiprocessing</span>
+
+<span class="py-src-comment"># check that profiles and configuration data are valid and return ready format configuration to send to each site</span>
+<span class="py-src-keyword">def</span> <span class="py-src-identifier">validateFormatScenario</span> (<span class="py-src-parameter">scenarioConf</span>, <span class="py-src-parameter">allSites</span>, <span class="py-src-parameter">allDevices</span>) : 
+
+    <span class="py-src-variable">sitesConf</span> = {}
+    <span class="py-src-keyword">for</span> <span class="py-src-variable">site</span> <span class="py-src-keyword">in</span> <span class="py-src-variable">scenarioConf</span>:
+        <span class="py-src-keyword">if</span> <span class="py-src-keyword">not</span> <span class="py-src-variable">allSites</span>.<span class="py-src-variable">has_key</span>(<span class="py-src-variable">site</span>):
+            <span class="py-src-keyword">print</span> <span class="py-src-string">"Site name '"</span> + <span class="py-src-variable">site</span> +<span class="py-src-string">"' not found, check configurations"</span>
+            <span class="py-src-variable">sys</span>.<span class="py-src-variable">exit</span>(<span class="py-src-number">0</span>)
+        <span class="py-src-variable">sitesConf</span>[<span class="py-src-variable">site</span>] = []
+        <span class="py-src-keyword">for</span> <span class="py-src-variable">device</span> <span class="py-src-keyword">in</span> <span class="py-src-variable">allSites</span>[<span class="py-src-variable">site</span>]:
+            <span class="py-src-keyword">if</span> <span class="py-src-keyword">not</span> <span class="py-src-variable">allDevices</span>.<span class="py-src-variable">has_key</span>(<span class="py-src-variable">device</span>):
+                <span class="py-src-keyword">print</span> <span class="py-src-string">"Device name '"</span> + <span class="py-src-variable">device</span> +<span class="py-src-string">"' not found, check configurations"</span>
+                <span class="py-src-variable">sys</span>.<span class="py-src-variable">exit</span>(<span class="py-src-number">0</span>)
+            <span class="py-src-variable">sitesConf</span>[<span class="py-src-variable">site</span>].<span class="py-src-variable">append</span>(<span class="py-src-variable">allDevices</span>[<span class="py-src-variable">device</span>])
+
+    <span class="py-src-keyword">print</span> <span class="py-src-variable">sitesConf</span>
+
+<span class="py-src-comment"># input settings</span>
+<span class="py-src-keyword">if</span> <span class="py-src-variable">len</span>(<span class="py-src-variable">sys</span>.<span class="py-src-variable">argv</span>) != <span class="py-src-number">5</span> :
+    <span class="py-src-keyword">print</span> <span class="py-src-string">"Wrong inpurt parameters: &lt;mqtt broker ip/hostname&gt; &lt;devices folder&gt; &lt;sites folder&gt; &lt;scenario configuration file&gt;"</span>
+    <span class="py-src-variable">sys</span>.<span class="py-src-variable">exit</span>(<span class="py-src-number">0</span>)
+<span class="py-src-keyword">else</span>:
+    <span class="py-src-variable">mqtt_broker_ip</span> = <span class="py-src-variable">sys</span>.<span class="py-src-variable">argv</span>[<span class="py-src-number">1</span>]
+    <span class="py-src-variable">mqtt_broker_port</span> = <span class="py-src-number">1883</span>
+    <span class="py-src-variable">devices_folder</span> = <span class="py-src-variable">sys</span>.<span class="py-src-variable">argv</span>[<span class="py-src-number">2</span>]
+    <span class="py-src-variable">sites_folder</span> = <span class="py-src-variable">sys</span>.<span class="py-src-variable">argv</span>[<span class="py-src-number">3</span>]
+    <span class="py-src-variable">scenario_file</span> = <span class="py-src-variable">sys</span>.<span class="py-src-variable">argv</span>[<span class="py-src-number">4</span>]
+
+<span class="py-src-comment"># read devices and sites profiles and emulation scenarion configuration</span>
+<span class="py-src-variable">allDevices</span> = <span class="py-src-variable">getDeviceProfile</span>.<span class="py-src-variable">getAllDeviceProfiles</span>(<span class="py-src-variable">devices_folder</span>)
+<span class="py-src-variable">allSites</span> = <span class="py-src-variable">getSiteProfile</span>.<span class="py-src-variable">getAllSiteProfiles</span>(<span class="py-src-variable">sites_folder</span>)
+<span class="py-src-variable">scenarioConf</span> = <span class="py-src-variable">getScenarioConf</span>.<span class="py-src-variable">getScenarioConf</span>(<span class="py-src-variable">scenario_file</span>)
+<span class="py-src-comment">#print devices</span>
+<span class="py-src-comment">#print sites</span>
+<span class="py-src-comment">#print scenarioConf</span>
+
+<span class="py-src-comment"># validate data and return sites configuration</span>
+<span class="py-src-variable">sitesConf</span> = <span class="py-src-variable">validateFormatScenario</span>(<span class="py-src-variable">scenarioConf</span>, <span class="py-src-variable">allSites</span>, <span class="py-src-variable">allDevices</span>)
+
+<span class="py-src-comment"># Create emulated "all in one" sites</span>
+
+
+<span class="py-src-comment"># Publish configurations for each site</span>
+
+</pre>
+</body>
