@@ -4,8 +4,11 @@ import os
 # get scenario conf
 def getScenarioConf(scenario_file):
 
-    with open(scenario_file) as json_file:
-        sc = json.load(json_file)
+    try:
+        with open(scenario_file) as json_file:
+            sc = json.load(json_file)
+    except Exception:
+        raise Exception
 
     allSites = []
     for site in sc["sitesAvailable"]:

@@ -4,8 +4,11 @@ import os
 # get device profile
 def getDeviceProfile(device_file):
 
-    with open(device_file) as json_file:
-        json_data = json.load(json_file)
+    try:
+        with open(device_file) as json_file:
+            json_data = json.load(json_file)
+    except Exception:
+        raise Exception
 
     return json_data
 
@@ -14,7 +17,10 @@ def getAllDeviceProfiles(device_folder):
 
     allDeviceProfiles = {}
 
-    allDeviceFiles = os.listdir(device_folder)
+    try:
+        allDeviceFiles = os.listdir(device_folder)
+    except Exception:
+        raise Exception
     
     for df in allDeviceFiles:
         dp = getDeviceProfile(device_folder + "/" + df)
