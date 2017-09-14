@@ -15,7 +15,7 @@ def getScenarioConf(scenario_file):
         for i in range(site["siteCounter"]):
             allSites.append(site["siteName"])
 
-    return allSites
+    return sc["updateInterval"], allSites
         
 #scenario_file = "scenarios/emuScenario01.json"
 #print getScenarioConf(scenario_file)

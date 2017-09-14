@@ -52,7 +52,7 @@ def validateFormatScenario (scenarioConf, allSites, allDevices) :
     sitesConf = {}
     for site in scenarioConf:
         if not allSites.has_key(site):
-            logging.error("Site name '" + site +"' not found, check configurations")
+            logging.error("Site name '" + str(site) +"' not found, check configurations")
             sys.exit(0)
         sitesConf[site] = []
         for device in allSites[site]:
@@ -110,7 +110,7 @@ except Exception:
     sys.exit(0)
 
 try:
-    scenarioConf = getScenarioConf.getScenarioConf(scenario_file)
+    (updateInterval, scenarioConf) = getScenarioConf.getScenarioConf(scenario_file)
 except Exception:
     logging.error("Scenario configuration could not be loaded.")
     sys.exit(0)
@@ -128,7 +128,8 @@ for site in sitesConf.keys():
     sp = multiprocessing.Process(target=allInOneSite.runSite, args=(mqtt_broker_ip, mqtt_broker_port, siteId))
     siteProcs.append(sp)
     sp.start()
-    commBusClient.publish(con.TOPIC_SITE_CONF + "/" + str(siteId), str(sitesConf[site]), retain=True)
+    commBusClient.publish(con.TOPIC_SITE_DEVICES_CONF + "/" + str(siteId), str(sitesConf[site]), retain=True)
+    commBusClient.publish(con.TOPIC_SITE_CONF + "/" + str(siteId), str(updateInterval), retain=True)
     siteId = siteId + 1
 
 # Publish configurations for each site
