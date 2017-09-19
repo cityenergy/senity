@@ -18,87 +18,95 @@ from apscheduler.schedulers.background import BackgroundScheduler
 #    mqtt_broker_ip = sys.argv[1] 
 #    mqtt_broker_port = 1883
 
-# The callback for when the client receives a CONNACK response from the mqtt broker
-def on_connect(client, userdata, flags, rc):
+class allInOneSite:
 
-    logging.info("Site " + str(sId) + " connected on mqtt broker with result code: " + str(rc))
-   
-    # Subscribing in on_connect() means that if we lose the connection and
-    # reconnect othen subscriptions will be renewed
-    
-    # Subscribe to initial configuration
-    topic = con.TOPIC_SITE_DEVICES_CONF + "/" + str(sId)
-    client.subscribe(topic)
-    topic = con.TOPIC_SITE_CONF + "/" + str(sId)
-    client.subscribe(topic)
+    def __init__(self):
+        self.sId = 0
+        self.siteDevices = {}
+        self.scheduler = BackgroundScheduler()
+        self.client = mqtt.Client()
 
-# The callback for when one of the topic messages is received from the mqtt broker
-def on_message(client, userdata, msg):
-    
-    scheduler = userdata
+    # The callback for when the self.client receives a CONNACK response from the mqtt broker
+    def __on_connect(self, client, userdata, flags, rc):
 
-    # Handle incoming messages
-    if msg.topic == con.TOPIC_SITE_DEVICES_CONF + "/" + str(sId):
-        logging.info("Site " + str(sId) + " devices' configuration received from site.")
-        try:
-            deviceProfiles = ast.literal_eval(str(msg.payload))
-        except Exception:
-            logging.error("Malformed messaged received in site: " + str(sId))
+        logging.info("Site " + str(self.sId) + " connected on mqtt broker with result code: " + str(rc))
 
-        processDeviceProfiles(deviceProfiles)
+        # Subscribing in on_connect() means that if we lose the connection and
+        # reconnect othen subscriptions will be renewed
 
-    elif msg.topic == con.TOPIC_SITE_CONF + "/" + str(sId):
-        logging.info("Site " + str(sId) + " configuration received from site.")
-        try:
-            updateInterval = ast.literal_eval(str(msg.payload))
-        except Exception:
-            logging.error("Malformed messaged received in site: " + str(sId))
+        # Subscribe to initial configuration
+        topic = con.TOPIC_SITE_DEVICES_CONF + "/" + str(self.sId)
+        client.subscribe(topic)
+        topic = con.TOPIC_SITE_CONF + "/" + str(self.sId)
+        client.subscribe(topic)
 
-        scheduler.remove_job(con.MAIN_SITE_PERIODIC_JOB) 
-        scheduler.add_job(runDevices, 'interval', seconds=updateInterval, id = con.MAIN_SITE_PERIODIC_JOB)
-        logging.info("Site " + str(sId) + " update updateInterval to: " + str(updateInterval))
-    else:
-        lala = ast.literal_eval(str(msg.payload))
-     
-        
-# Run "all in one" site main function
-def runSite (mqtt_broker_ip, mqtt_broker_port, siteId) :
+    # The callback for when one of the topic messages is received from the mqtt broker
+    def __on_message(self, client, userdata, msg):
 
-    global sId, siteDevices, client
-    sId = siteId
-    siteDevices = {}
+        # Handle incoming messages
+        if msg.topic == con.TOPIC_SITE_DEVICES_CONF + "/" + str(self.sId):
+            logging.info("Site " + str(self.sId) + " devices' configuration received from site.")
+            try:
+                deviceProfiles = ast.literal_eval(str(msg.payload))
+            except Exception:
+                logging.error("Malformed messaged received in site: " + str(self.sId))
 
-    # Run Scheduler
-    logging.getLogger('apscheduler').propagate = False
-    scheduler = BackgroundScheduler()
-    scheduler.start()
-    job = scheduler.add_job(runDevices, 'interval', id = con.MAIN_SITE_PERIODIC_JOB)
+            self.siteDevices = self.__processDeviceProfiles(deviceProfiles)
 
-    # Create, configure mqtt client and connect 
-    client = mqtt.Client(userdata=scheduler)
-    client.loop_start()
-    client.on_connect = on_connect
-    client.on_message = on_message
+        elif msg.topic == con.TOPIC_SITE_CONF + "/" + str(self.sId):
+            logging.info("Site " + str(self.sId) + " configuration received from site.")
+            try:
+                updateInterval = ast.literal_eval(str(msg.payload))
+            except Exception:
+                logging.error("Malformed messaged received in site: " + str(self.sId))
 
-    rc = client.connect(mqtt_broker_ip, mqtt_broker_port, 60)
+            self.scheduler.remove_job(con.MAIN_SITE_PERIODIC_JOB)
+            self.scheduler.add_job(self.__runDevices, 'interval', seconds=updateInterval, id = con.MAIN_SITE_PERIODIC_JOB)
+            logging.info("Site " + str(self.sId) + " update updateInterval to: " + str(updateInterval))
 
-    # Blocking call that processes network traffic, dispatches callbacks and
-    # handles reconnecting.
-    # Other loop*() functions are available that give a threaded interface and a
-    # manual interface.
-    client.loop_forever()
 
-# Process device profiles
-def processDeviceProfiles (deviceProfiles):
+    # Process device profiles
+    def __processDeviceProfiles (self, deviceProfiles):
 
-    deviceId = 0
+        deviceId = 0
 
-    for profile in deviceProfiles:
-        siteDevices[deviceId] = {'profile': profile, 'status': 1}
-        deviceId = deviceId + 1
+        for profile in deviceProfiles:
+            self.siteDevices[deviceId] = {'profile': profile, 'status': 1}
+            deviceId = deviceId + 1
 
-# Run the devices
-def runDevices ():
-  
-    for dId in siteDevices.keys():
-        client.publish(con.TOPIC_SITE_DEVICE_CONSUMPTION + "/" + str(sId) + "/" + str(dId), str(siteDevices[dId]['profile']['avgConsumption']) )
+        return self.siteDevices
+
+    # Run the devices
+    def __runDevices (self):
+
+        for dId in self.siteDevices.keys():
+            self.client.publish(con.TOPIC_SITE_DEVICE_CONSUMPTION + "/" + str(self.sId) + "/" + str(dId), str(self.siteDevices[dId]['profile']['avgConsumption']) )
+
+    # Run "all in one" site main function
+    def runSite (self, mqtt_broker_ip, mqtt_broker_port, siteId) :
+
+        self.sId = siteId
+
+        # Run Scheduler
+        logging.getLogger('apscheduler').propagate = False
+        self.scheduler.start()
+
+        # Create, configure mqtt self.client and connect
+        self.client.loop_start()
+        self.client.on_connect = self.__on_connect
+        self.client.on_message = self.__on_message
+
+        job = self.scheduler.add_job(self.__runDevices, 'interval', id = con.MAIN_SITE_PERIODIC_JOB)
+
+        rc = self.client.connect(mqtt_broker_ip, mqtt_broker_port, 60)
+
+        # Blocking call that processes network traffic, dispatches callbacks and
+        # handles reconnecting.
+        # Other loop*() functions are available that give a threaded interface and a
+        # manual interface.
+        self.client.loop_forever()
+
+def startSite(mqtt_broker_ip, mqtt_broker_port, siteId) :
+
+    newSite = allInOneSite()
+    newSite.runSite(mqtt_broker_ip, mqtt_broker_port, siteId)  

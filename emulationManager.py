@@ -125,7 +125,7 @@ sitesConf = validateFormatScenario(scenarioConf, allSites, allDevices)
 siteProcs = []
 siteId = 0
 for site in sitesConf.keys():
-    sp = multiprocessing.Process(target=allInOneSite.runSite, args=(mqtt_broker_ip, mqtt_broker_port, siteId))
+    sp = multiprocessing.Process(target=allInOneSite.startSite, args=(mqtt_broker_ip, mqtt_broker_port, siteId))
     siteProcs.append(sp)
     sp.start()
     commBusClient.publish(con.TOPIC_SITE_DEVICES_CONF + "/" + str(siteId), str(sitesConf[site]), retain=True)
