@@ -39,31 +39,42 @@ class allInOneSite:
         client.subscribe(topic)
         topic = con.TOPIC_SITE_CONF + "/" + str(self.sId)
         client.subscribe(topic)
+        topic = con.TOPIC_SITE_DEVICE_STATUS + "/" + str(self.sId) + "/#"
+        client.subscribe(topic)
 
     # The callback for when one of the topic messages is received from the mqtt broker
     def __on_message(self, client, userdata, msg):
 
         # Handle incoming messages
+        try:
+            msgPayload = ast.literal_eval(str(msg.payload))
+        except Exception:
+            logging.error("Malformed messaged received in site: " + str(self.sId))
+
+        # Site devices' configuration
         if msg.topic == con.TOPIC_SITE_DEVICES_CONF + "/" + str(self.sId):
-            logging.info("Site " + str(self.sId) + " devices' configuration received from site.")
-            try:
-                deviceProfiles = ast.literal_eval(str(msg.payload))
-            except Exception:
-                logging.error("Malformed messaged received in site: " + str(self.sId))
-
+            deviceProfiles = msgPayload
             self.siteDevices = self.__processDeviceProfiles(deviceProfiles)
+            logging.info("Site " + str(self.sId) + " devices' configuration received.")
 
+        # Site overall configuration
         elif msg.topic == con.TOPIC_SITE_CONF + "/" + str(self.sId):
-            logging.info("Site " + str(self.sId) + " configuration received from site.")
-            try:
-                updateInterval = ast.literal_eval(str(msg.payload))
-            except Exception:
-                logging.error("Malformed messaged received in site: " + str(self.sId))
-
+            updateInterval = msgPayload
             self.scheduler.remove_job(con.MAIN_SITE_PERIODIC_JOB)
             self.scheduler.add_job(self.__runDevices, 'interval', seconds=updateInterval, id = con.MAIN_SITE_PERIODIC_JOB)
-            logging.info("Site " + str(self.sId) + " update updateInterval to: " + str(updateInterval))
+            logging.info("Site " + str(self.sId) + " update interval to: " + str(updateInterval))
 
+        # Update device status (on/off)
+        elif (con.TOPIC_SITE_DEVICE_STATUS + "/" + str(self.sId)) in msg.topic:
+            tmpString = (msg.topic).split("/")
+            try:
+                deviceId = int(tmpString[2])
+            except Exception:
+                logging.error("Malformed messaged received in site: " + str(self.sId))
+            self.siteDevices[deviceId]["status"] = msgPayload
+            logging.info("Site " + str(self.sId) + " device " + str(deviceId) + " status update received: " + str(self.siteDevices[int(deviceId)]["status"]))
+        else:
+            logging.info(msg.topic)
 
     # Process device profiles
     def __processDeviceProfiles (self, deviceProfiles):
@@ -80,7 +91,8 @@ class allInOneSite:
     def __runDevices (self):
 
         for dId in self.siteDevices.keys():
-            self.client.publish(con.TOPIC_SITE_DEVICE_CONSUMPTION + "/" + str(self.sId) + "/" + str(dId), str(self.siteDevices[dId]['profile']['avgConsumption']) )
+            if self.siteDevices[dId]['status'] == 1 :
+                self.client.publish(con.TOPIC_SITE_DEVICE_CONSUMPTION + "/" + str(self.sId) + "/" + str(dId), str(self.siteDevices[dId]['profile']['avgConsumption']) )
 
     # Run "all in one" site main function
     def runSite (self, mqtt_broker_ip, mqtt_broker_port, siteId) :
