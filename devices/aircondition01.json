@@ -1,6 +1,8 @@
 {
   "name" : "aircondition01",
   "type" : "aircondition",
+  "status": 1,
+  "updateInteval": 10,
   "avgConsumption": 1100,
   "workingCycle": 5 
 }

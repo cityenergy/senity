@@ -53,8 +53,7 @@ class allInOneSite:
 
         # Site devices' configuration
         if msg.topic == con.TOPIC_SITE_DEVICES_CONF + "/" + str(self.sId):
-            deviceProfiles = msgPayload
-            self.siteDevices = self.__processDeviceProfiles(deviceProfiles)
+            self.siteDevices = msgPayload
             logging.info("Site " + str(self.sId) + " devices' configuration received.")
 
         # Site overall configuration
@@ -73,26 +72,17 @@ class allInOneSite:
                 logging.error("Malformed messaged received in site: " + str(self.sId))
             self.siteDevices[deviceId]["status"] = msgPayload
             logging.info("Site " + str(self.sId) + " device " + str(deviceId) + " status update received: " + str(self.siteDevices[int(deviceId)]["status"]))
+            # publish new site devices configuration
+            self.client.publish(con.TOPIC_SITE_DEVICES_CONF + "/" + str(self.sId), str(self.siteDevices), retain=True) 
         else:
             logging.info(msg.topic)
-
-    # Process device profiles
-    def __processDeviceProfiles (self, deviceProfiles):
-
-        deviceId = 0
-
-        for profile in deviceProfiles:
-            self.siteDevices[deviceId] = {'profile': profile, 'status': 1}
-            deviceId = deviceId + 1
-
-        return self.siteDevices
 
     # Run the devices
     def __runDevices (self):
 
         for dId in self.siteDevices.keys():
             if self.siteDevices[dId]['status'] == 1 :
-                self.client.publish(con.TOPIC_SITE_DEVICE_CONSUMPTION + "/" + str(self.sId) + "/" + str(dId), str(self.siteDevices[dId]['profile']['avgConsumption']) )
+                self.client.publish(con.TOPIC_SITE_DEVICE_CONSUMPTION + "/" + str(self.sId) + "/" + str(dId), str(self.siteDevices[dId]['avgConsumption']) )
 
     # Run "all in one" site main function
     def runSite (self, mqtt_broker_ip, mqtt_broker_port, siteId) :

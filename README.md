@@ -12,9 +12,10 @@ Senity is an emulator for smart energy grids
 7. override device characteristics in scenario (?)
 8. time synchronization
 9. scalability and handling of defunc process
-- simple basic web UI
+10. simple basic web UI
+11. adding testing functionality
 
 other:
 - Clear mqtt broker old msg
-- better associate deviceid with actual device profile
-- utilize workingcycle
+- [TBD] utilize device's update interval
+- [TBD] utilize workingcycle

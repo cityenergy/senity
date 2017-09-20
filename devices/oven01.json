@@ -1,6 +1,8 @@
 {
   "name" : "oven01",
   "type" : "oven",
+  "status": 0,
+  "updateInteval": 10,
   "avgConsumption": 3000,
   "workingCycle": 3
 }

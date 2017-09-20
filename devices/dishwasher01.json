@@ -1,6 +1,8 @@
 {
   "name" : "dishwasher01",
   "type" : "dishwasher",
+  "status": 1,
+  "updateInteval": 10,
   "avgConsumption": 1200,
   "workingCycle": 3
 }

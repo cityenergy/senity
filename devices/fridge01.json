@@ -1,6 +1,8 @@
 {
   "name" : "fridge01",
   "type" : "fridge",
+  "status": 1,
+  "updateInteval": 10,
   "avgConsumption": 350,
   "workingCycle": 24
 }

@@ -51,15 +51,17 @@ def validateFormatScenario (scenarioConf, allSites, allDevices) :
 
     sitesConf = {}
     for site in scenarioConf:
+        dId = 0
         if not allSites.has_key(site):
             logging.error("Site name '" + str(site) +"' not found, check configurations")
             sys.exit(0)
-        sitesConf[site] = []
+        sitesConf[site] = {}
         for device in allSites[site]:
             if not allDevices.has_key(device):
                 logging.error("Device name '" + device +"' not found, check configurations")
                 sys.exit(0)
-            sitesConf[site].append(allDevices[device])
+            sitesConf[site][dId]=allDevices[device]
+            dId = dId + 1
 
     return sitesConf
 
