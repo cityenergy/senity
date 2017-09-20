@@ -11,6 +11,9 @@ import multiprocessing
 import ConfigParser
 import argparse
 import logging
+from prompt_toolkit import prompt
+from prompt_toolkit.history import FileHistory
+from prompt_toolkit.contrib.completers import WordCompleter
 
 # Init logging functionallity
 def initLogging (log_file):
@@ -92,6 +95,12 @@ def connectToCommBus(mqtt_broker_ip, mqtt_broker_port, userdata="") :
 
     return client
 
+# Closing and exiting senity
+def closeSenity(siteProcs):
+    for sp in siteProcs:
+        sp.terminate()
+
+
 # Read input parameters
 (conf_file, scenario_file) = parseArguments()
 #print conf_file, scenario_file
@@ -134,5 +143,24 @@ for site in sitesConf.keys():
     commBusClient.publish(con.TOPIC_SITE_CONF + "/" + str(siteId), str(updateInterval), retain=True)
     siteId = siteId + 1
 
-# Publish configurations for each site
+# Start console
 
+# Available commands
+availableCommands = ["sites", "devices", "site", "device", "switch_on", "switch_off", "consumption", "run scenario", "help", "exit"]
+Completer = WordCompleter(availableCommands)
+
+# Console loop
+while True:
+    cmd = prompt(unicode(con.CONSOLE_PROMPT), history=FileHistory('console_history.txt'), completer=Completer)
+
+    if cmd in availableCommands: 
+        if cmd == "exit" :
+            print("'There is a kind of senity in love which is almost a paradise'")
+            break
+        elif cmd == "help" :
+            print("Available commands: " + str(availableCommands))
+    else:
+        print("Command not found")
+
+# Close senity
+closeSenity(siteProcs)

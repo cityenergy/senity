@@ -14,6 +14,7 @@ Senity is an emulator for smart energy grids
 9. scalability and handling of defunc process
 10. simple basic web UI
 11. adding testing functionality
+12. packaging of the whole thing
 
 other:
 - Clear mqtt broker old msg
