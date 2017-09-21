@@ -25,11 +25,12 @@ class allInOneSite:
         self.siteDevices = {}
         self.scheduler = BackgroundScheduler()
         self.client = mqtt.Client()
+        self.senityLogger = logging.getLogger("senity_allInOneSite")
 
     # The callback for when the self.client receives a CONNACK response from the mqtt broker
     def __on_connect(self, client, userdata, flags, rc):
 
-        logging.info("Site " + str(self.sId) + " connected on mqtt broker with result code: " + str(rc))
+        self.senityLogger.info("Site " + str(self.sId) + " connected on mqtt broker with result code: " + str(rc))
 
         # Subscribing in on_connect() means that if we lose the connection and
         # reconnect othen subscriptions will be renewed
@@ -49,19 +50,19 @@ class allInOneSite:
         try:
             msgPayload = ast.literal_eval(str(msg.payload))
         except Exception:
-            logging.error("Malformed messaged received in site: " + str(self.sId))
+            self.senityLogger.error("Malformed messaged received in site: " + str(self.sId))
 
         # Site devices' configuration
         if msg.topic == con.TOPIC_SITE_DEVICES_CONF + "/" + str(self.sId):
             self.siteDevices = msgPayload
-            logging.info("Site " + str(self.sId) + " devices' configuration received.")
+            self.senityLogger.info("Site " + str(self.sId) + " devices' configuration received.")
 
         # Site overall configuration
         elif msg.topic == con.TOPIC_SITE_CONF + "/" + str(self.sId):
             updateInterval = msgPayload
             self.scheduler.remove_job(con.MAIN_SITE_PERIODIC_JOB)
             self.scheduler.add_job(self.__runDevices, 'interval', seconds=updateInterval, id = con.MAIN_SITE_PERIODIC_JOB)
-            logging.info("Site " + str(self.sId) + " update interval to: " + str(updateInterval))
+            self.senityLogger.info("Site " + str(self.sId) + " update interval to: " + str(updateInterval))
 
         # Update device status (on/off)
         elif (con.TOPIC_SITE_DEVICE_STATUS + "/" + str(self.sId)) in msg.topic:
@@ -69,13 +70,13 @@ class allInOneSite:
             try:
                 deviceId = int(tmpString[2])
             except Exception:
-                logging.error("Malformed messaged received in site: " + str(self.sId))
+                self.senityLogger.error("Malformed messaged received in site: " + str(self.sId))
             self.siteDevices[deviceId]["status"] = msgPayload
-            logging.info("Site " + str(self.sId) + " device " + str(deviceId) + " status update received: " + str(self.siteDevices[int(deviceId)]["status"]))
+            self.senityLogger.info("Site " + str(self.sId) + " device " + str(deviceId) + " status update received: " + str(self.siteDevices[int(deviceId)]["status"]))
             # publish new site devices configuration
             self.client.publish(con.TOPIC_SITE_DEVICES_CONF + "/" + str(self.sId), str(self.siteDevices), retain=True) 
         else:
-            logging.info(msg.topic)
+            self.senityLogger.info(msg.topic)
 
     # Run the devices
     def __runDevices (self):
@@ -90,7 +91,9 @@ class allInOneSite:
         self.sId = siteId
 
         # Run Scheduler
-        logging.getLogger('apscheduler').propagate = False
+        ch = logging.NullHandler()
+        logging.getLogger('apscheduler.scheduler').addHandler(ch)
+        logging.getLogger('apscheduler.scheduler').propagate = False
         self.scheduler.start()
 
         # Create, configure mqtt self.client and connect

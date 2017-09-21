@@ -11,8 +11,9 @@ import multiprocessing
 import ConfigParser
 import argparse
 import logging
+import time
 from prompt_toolkit import prompt
-from prompt_toolkit.history import FileHistory
+from prompt_toolkit.history import InMemoryHistory
 from prompt_toolkit.contrib.completers import WordCompleter
 
 # Init logging functionallity
@@ -20,6 +21,8 @@ def initLogging (log_file):
     if not log_file:
         logging.propagate = False
     else: 
+        global senityLogger
+        senityLogger = logging.getLogger("senity_emulationManager")
         logging.basicConfig(format='%(asctime)s : %(message)s', filename=log_file,level=logging.DEBUG)
 
 # Parse command line arguments
@@ -39,7 +42,8 @@ def readConfiguration (conf_file):
     try:
         config.read(conf_file)
     except Exception:
-        logging.error("Could not read configuration file: " + conf_file)
+        print("Could not read configuration file: " + conf_file)
+        sys.exit(0)
 
     devices_folder = config.get('General', 'devices_folder')
     sites_folder = config.get('General', 'sites_folder')
@@ -56,12 +60,12 @@ def validateFormatScenario (scenarioConf, allSites, allDevices) :
     for site in scenarioConf:
         dId = 0
         if not allSites.has_key(site):
-            logging.error("Site name '" + str(site) +"' not found, check configurations")
+            senityLogger.error("Site name '" + str(site) +"' not found, check configurations")
             sys.exit(0)
         sitesConf[site] = {}
         for device in allSites[site]:
             if not allDevices.has_key(device):
-                logging.error("Device name '" + device +"' not found, check configurations")
+                senityLogger.error("Device name '" + device +"' not found, check configurations")
                 sys.exit(0)
             sitesConf[site][dId]=allDevices[device]
             dId = dId + 1
@@ -71,7 +75,7 @@ def validateFormatScenario (scenarioConf, allSites, allDevices) :
 # The callback for when the client receives a CONNACK response from the mqtt broker
 def on_connect(client, userdata, flags, rc):
 
-    logging.info("Emulation Manager connected on mqtt broker with result code: " + str(rc))
+     senityLogger.info("Emulation Manager connected on mqtt broker with result code: " + str(rc))
 
     # Subscribing in on_connect() means that if we lose the connection and
     # reconnect othen subscriptions will be renewed
@@ -79,9 +83,16 @@ def on_connect(client, userdata, flags, rc):
 # The callback for when one of the topic messages is received from the mqtt broker
 def on_message(client, userdata, msg):
 
+    if (con.TOPIC_SITE_CONF + "/") in msg.topic:
+        tmpString = (msg.topic).split("/")
+        try:
+            siteId = int(tmpString[1])
+            foundSites.append(siteId)
+        except Exception:
+             senityLogger.error("Malformed messaged received by Senity emulation manager")
+
     #print msg.topic+ " " + str(msg.payload)
-    
-    pass
+
 
 # Connect to the communication bus
 def connectToCommBus(mqtt_broker_ip, mqtt_broker_port, userdata="") :
@@ -90,6 +101,7 @@ def connectToCommBus(mqtt_broker_ip, mqtt_broker_port, userdata="") :
     client = mqtt.Client()
     client.loop_start()
     client.on_connect = on_connect
+    client.on_message = on_message
 
     rc = client.connect(mqtt_broker_ip, mqtt_broker_port, 60)
 
@@ -100,6 +112,8 @@ def closeSenity(siteProcs):
     for sp in siteProcs:
         sp.terminate()
 
+
+global foundSites 
 
 # Read input parameters
 (conf_file, scenario_file) = parseArguments()
@@ -117,13 +131,13 @@ try:
     allDevices = getDeviceProfile.getAllDeviceProfiles(devices_folder)
     allSites = getSiteProfile.getAllSiteProfiles(sites_folder)
 except Exception:
-    logging.error("Device and/or site profiles could not be loaded.")
+    senityLogger.error("Device and/or site profiles could not be loaded.")
     sys.exit(0)
 
 try:
     (updateInterval, scenarioConf) = getScenarioConf.getScenarioConf(scenario_file)
 except Exception:
-    logging.error("Scenario configuration could not be loaded.")
+    senityLogger.error("Scenario configuration could not be loaded.")
     sys.exit(0)
 
 # Connect to comm bus
@@ -146,12 +160,13 @@ for site in sitesConf.keys():
 # Start console
 
 # Available commands
-availableCommands = ["sites", "devices", "site", "device", "switch_on", "switch_off", "consumption", "run scenario", "help", "exit"]
+availableCommands = ["sites", "devices", "site", "site add", "site delete", "device", "device_on", "device_off", "consumption", "run scenario", "help", "exit"]
 Completer = WordCompleter(availableCommands)
 
 # Console loop
+memHistory = InMemoryHistory()
 while True:
-    cmd = prompt(unicode(con.CONSOLE_PROMPT), history=FileHistory('console_history.txt'), completer=Completer)
+    cmd = prompt(unicode(con.CONSOLE_PROMPT), history=memHistory, completer=Completer)
 
     if cmd in availableCommands: 
         if cmd == "exit" :
@@ -159,6 +174,11 @@ while True:
             break
         elif cmd == "help" :
             print("Available commands: " + str(availableCommands))
+        elif cmd == "sites":
+            foundSites = []
+            commBusClient.subscribe(con.TOPIC_SITE_CONF + "/#")
+            time.sleep(2)
+            print foundSites
     else:
         print("Command not found")
 
