@@ -15,6 +15,7 @@ import time
 from prompt_toolkit import prompt
 from prompt_toolkit.history import InMemoryHistory
 from prompt_toolkit.contrib.completers import WordCompleter
+import re
 
 # Init logging functionallity
 def initLogging (log_file):
@@ -32,8 +33,12 @@ def parseArguments ():
     parser.add_argument('-c', nargs=1, help="The configuration file")
     parser.add_argument('-s', nargs=1, help="The emulation scenario file")
     args = parser.parse_args()
-
-    return args.c[0], args.s[0]
+    
+    try:
+        return args.c[0], args.s[0]
+    except Exception:
+        parser.print_help()
+        sys.exit(0)
 
 # Read configuration parameters
 def readConfiguration (conf_file):
@@ -50,8 +55,15 @@ def readConfiguration (conf_file):
     mqtt_broker_ip =  config.get('General', 'mqtt_broker_ip')
     mqtt_broker_port = config.get('General', 'mqtt_broker_port')
     log_file = config.get('General', 'log_file')
+    console_cmd_waiting = config.get('General', 'console_cmd_waiting') 
     
-    return devices_folder, sites_folder, mqtt_broker_ip, mqtt_broker_port, log_file
+    if not console_cmd_waiting.isdigit():
+        print("Error in configuration file: " + conf_file)
+        sys.exit(0)
+    else:
+        console_cmd_waiting = int(console_cmd_waiting)
+    
+    return devices_folder, sites_folder, mqtt_broker_ip, mqtt_broker_port, log_file, console_cmd_waiting
 
 # Check that profiles and configuration data are valid and return ready format configuration to send to each site
 def validateFormatScenario (scenarioConf, allSites, allDevices) : 
@@ -82,7 +94,6 @@ def on_connect(client, userdata, flags, rc):
 
 # The callback for when one of the topic messages is received from the mqtt broker
 def on_message(client, userdata, msg):
-
     if (con.TOPIC_SITE_CONF + "/") in msg.topic:
         tmpString = (msg.topic).split("/")
         try:
@@ -90,9 +101,9 @@ def on_message(client, userdata, msg):
             foundSites.append(siteId)
         except Exception:
              senityLogger.error("Malformed messaged received by Senity emulation manager")
-
+    elif(con.TOPIC_SITE_DEVICES_CONF + "/" + searchForSiteId) in msg.topic:
+        foundSiteDevices.append(str(msg.payload))
     #print msg.topic+ " " + str(msg.payload)
-
 
 # Connect to the communication bus
 def connectToCommBus(mqtt_broker_ip, mqtt_broker_port, userdata="") :
@@ -112,15 +123,24 @@ def closeSenity(siteProcs):
     for sp in siteProcs:
         sp.terminate()
 
+# Handle output during console waiting for command to return
+def consoleWaitOutput(console_cmd_waiting):
+    for i in range(console_cmd_waiting):
+        print ".",
+        sys.stdout.flush()
+        time.sleep(0.2)
+
 
 global foundSites 
+global searchForSiteId
+global foundSiteDevices
 
 # Read input parameters
 (conf_file, scenario_file) = parseArguments()
 #print conf_file, scenario_file
 
 # Read configuration
-(devices_folder, sites_folder, mqtt_broker_ip, mqtt_broker_port, log_file) = readConfiguration(conf_file)
+(devices_folder, sites_folder, mqtt_broker_ip, mqtt_broker_port, log_file, console_cmd_waiting) = readConfiguration(conf_file)
 #print devices_folder, sites_folder, mqtt_broker_ip, mqtt_broker_port
 
 # Init logging
@@ -160,13 +180,19 @@ for site in sitesConf.keys():
 # Start console
 
 # Available commands
-availableCommands = ["sites", "devices", "site", "site add", "site delete", "device", "device_on", "device_off", "consumption", "run scenario", "help", "exit"]
+availableCommands = ["sites", "site", "site add", "site delete", "device", "device on", "device off", "consumption", "help", "exit"]
 Completer = WordCompleter(availableCommands)
 
 # Console loop
 memHistory = InMemoryHistory()
 while True:
-    cmd = prompt(unicode(con.CONSOLE_PROMPT), history=memHistory, completer=Completer)
+    # Handle the case where the commands has multiple arguments
+    cmdFull = prompt(unicode(con.CONSOLE_PROMPT), history=memHistory, completer=Completer)
+    cmdSplit = cmdFull.split()
+    if not cmdFull == "": 
+        cmd = cmdSplit[0]
+    else:
+        continue
 
     if cmd in availableCommands: 
         if cmd == "exit" :
@@ -177,8 +203,27 @@ while True:
         elif cmd == "sites":
             foundSites = []
             commBusClient.subscribe(con.TOPIC_SITE_CONF + "/#")
-            time.sleep(2)
-            print foundSites
+            consoleWaitOutput(console_cmd_waiting)
+            print "\nSites found: " + str(foundSites)
+        elif "site":
+            if(len(cmdSplit) == 2 and re.match('(\d+)', cmdSplit[1])): 
+                searchForSiteId = cmdSplit[1]
+                foundSiteDevices = []
+                commBusClient.subscribe(con.TOPIC_SITE_DEVICES_CONF + "/" + searchForSiteId)
+                consoleWaitOutput(console_cmd_waiting)
+                print "\nDevices found in Site " + str(searchForSiteId) + " :\n" + str(foundSiteDevices)
+            else:
+                print "Wrong syntax: site <site id>"
+        elif "device":
+            print cmdSplit
+            if(len(cmdSplit) == 2 and re.match('(\d+)/(\d+)', cmdSplit[1])): 
+                print cmdFull  
+            elif(len(cmdSplit) == 3 and  cmdSplit[1].lower() == "on" and re.match('(\d+)/(\d+)', cmdSplit[2])):
+                print "on"
+            elif(len(cmdSplit) == 3 and  cmdSplit[1].lower() == "off" and re.match('(\d+)/(\d+)', cmdSplit[2])):
+                print "off"
+            else:
+                print "Wrong syntax: devices <site id>"
     else:
         print("Command not found")
 
