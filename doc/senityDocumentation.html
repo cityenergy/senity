@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+
+<body>
+
+<h2>SENITY: Smart Energy in the City</h2>
+
+<h2>Introduction</h2>
+<p>
+Senity is an emulator for smart energy deployments targeting city environments. In this context, it can emulate sites (apartments, buildings etc) that contain a smart energy meter, smart energy devices and appliances and any kind of renewable sources. Senity is by design enabled to interact (or even integrate) with actuall energy related systems for DR, forecasting and energy pricing, real devices capable of reporting their energy profiles and to receive commands and other kind of energy related hardware and software systems. In this way it is possible to evaluate the operational, functional, algorithmic behaviour and performance of the respective entities in emulated large scale setup, where various scenarios (weather, energy usage) can be easily configured.
+</p>
+
+<h2>Architecture and design </h2>
+The overall architecture of the system is presented in the following figure.
+
+Three basic design variations can be considered for the device, smart meter/gateway, site entities: 
+<ol>
+	<li> "allInOne" where all these entities are emulated through a single program (e.g., a process)
+	<li> "oneToOne" where all these entities are emulated through different programs (e.g., different processes running in a container)
+	<li> "realOne" where all or some of these entities are actual ones: e.g. an actual device, an openhab gateway (or even a vimsen ldrm etc.)
+</ol>
+
+
+In oneToOne mode the device characteristics could be expressed through Yang \& configured through netconf
+
+All the entities interact through the communication bus, exchaning measurements and commands, with the exception of the devices which is possible also to communicate and controlled through the gateway or smart meter. In this case the gateway or smart meter will translate commands (e.g. read from the communication bus) to specific commands (e.g., netconf) for the devices, hiding in this way the devices' particularities. (This is also what happens in VIMSEN with LDRM though in practice everything happen through the MQTT broker that acts as a communication bus)
+
+<h2>Code and Configuration</h2>
+
+<pre style= "white-space: pre-wrap; background: grey; width: 55%">
+<font color="white">
+{
+  "name" : "aircondition01",
+  "type" : "aircondition",
+  "status": 1, 
+  “updateInterval: 10”
+  "avgConsumption": 1100,
+  "workingCycle": 5
+}
+</font>
+</pre>
+
+<pre style= "white-space: pre-wrap; background: grey; width: 55%">
+<font color="white">
+{ "siteName": "site01",
+  "devicesAvailable":
+  [
+    {"deviceName": "oven01", "deviceCounter": 1},
+    {"deviceName": "fridge01", "deviceCounter": 1},
+    {"deviceName": "aircondition01", "deviceCounter": 3},
+    {"deviceName": "dishwasher01", "deviceCounter": 1}
+  ]
+}
+</font>
+</pre>
+
+<pre style= "white-space: pre-wrap; background: grey; width: 55%">
+<font color="white">
+{
+  "scenarionName": "scen01",
+   “updateInterval”: 10,
+  "sitesAvailable":
+  [
+    {"siteName": "site01", "siteCounter": 10 },
+    {"siteName": "site02", "siteCounter": 20 }
+  ]
+}
+</font>
+</pre>
+
+<h2>Usage</h2>
+<h2>Installation/Deployment</h2>
+
+
+
+</body>
+</html>
