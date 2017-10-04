@@ -48,12 +48,19 @@ def on_message(client, userdata, msg):
             foundSites.append(siteId)
         except Exception:
              print("Malformed messaged received by Senity emulation manager")
-    elif(con.TOPIC_SITE_DEVICES_CONF + "/" + searchForSiteId) in msg.topic:
+    elif(con.TOPIC_SITE_DEVICES_CONF + "/" + str(searchForSiteId)) in msg.topic:
         foundSiteDevices.append(str(msg.payload))
+    elif(con.TOPIC_SITE_DEVICE_CONSUMPTION + "/" + str(siteDeviceId)) in msg.topic:
+        deviceConsumptionData.append(str(msg.payload))
+
 
 global foundSites
 global searchForSiteId
+global siteDeviceId
 global foundSiteDevices
+global deviceConsumptionData
+searchForSiteId = -1
+siteDeviceId = -1
 
 # Read input parameters
 (conf_file, scenario_file) = parseArguments()
@@ -111,6 +118,7 @@ while True:
                 consoleWaitOutput(console_cmd_waiting)
                 client.unsubscribe(con.TOPIC_SITE_DEVICES_CONF + "/" + searchForSiteId)
                 print("\nDevices found in Site " + str(searchForSiteId) + " :\n" + str(foundSiteDevices))
+                searchForSiteId = -1
             else:
                 print("Wrong syntax: site <site id>")
         elif cmd == "device_on":
@@ -125,6 +133,17 @@ while True:
                 client.publish(con.TOPIC_SITE_DEVICE_STATUS + "/" + str(siteDeviceId), str(0))
             else:
                 print("Wrong syntax: device_on <site id>/<device id>")
+        elif cmd == "device_consumption":
+            if(len(cmdSplit) == 2 and re.match('(\d+)/(\d+)', cmdSplit[1])):
+                siteDeviceId = cmdSplit[1]
+                deviceConsumptionData = []
+                client.subscribe(con.TOPIC_SITE_DEVICE_CONSUMPTION + "/" + str(siteDeviceId))
+                consoleWaitOutput(console_cmd_waiting)
+                client.unsubscribe(con.TOPIC_SITE_DEVICE_CONSUMPTION + "/" + str(siteDeviceId))
+                print("\nDevice " + str(siteDeviceId) + " consumption :\n" + str(deviceConsumptionData))
+                siteDeviceId = -1
+            else:
+                print("Wrong syntax: device_consumption <site id>/<device id>")
     else:
         print("Command not found")
 

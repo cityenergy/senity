@@ -1,6 +1,6 @@
 {
   "scenarioName": "scen01",
-  "updateInterval": 30,
+  "updateInterval": 5,
   "sitesAvailable": 
   [ 
     {"siteName": "site01", "siteCounter": 10 },

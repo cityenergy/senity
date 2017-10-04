@@ -15,8 +15,11 @@ Senity is an emulator for smart energy grids
 10. simple basic web UI
 11. adding testing functionality
 12. packaging of the whole thing
+14. Yang files for device abstractions
 
 other:
+- remove trash msgs from log
+- make console a separate file and abstract through constants the cmd names
 - Clear mqtt broker old msg
 - [TBD] utilize device's update interval
 - [TBD] utilize workingcycle
