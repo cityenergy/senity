@@ -12,220 +12,143 @@ import ConfigParser
 import argparse
 import logging
 import time
-from prompt_toolkit import prompt
-from prompt_toolkit.history import InMemoryHistory
-from prompt_toolkit.contrib.completers import WordCompleter
-import re
 
-# Init logging functionallity
-def initLogging (log_file):
-    if not log_file:
-        logging.propagate = False
-    else: 
-        global senityLogger
-        senityLogger = logging.getLogger("senity_emulationManager")
-        logging.basicConfig(format='%(asctime)s : %(message)s', filename=log_file,level=logging.DEBUG)
+class emulationManager:
 
-# Parse command line arguments
-def parseArguments ():
+    def __init__(self):
+        self.commBusClient = mqtt.Client()
+        self.senityLogger = 0
+        self.devices_folder = ""
+        self.sites_folder = ""
+        self.mqtt_broker_ip = ""
+        self.mqtt_broker_port = 0
+        self.log_file = ""
+        self.console_cmd_waiting = ""
+        self.siteProcs = []
 
-    parser = argparse.ArgumentParser("senity")
-    parser.add_argument('-c', nargs=1, help="The configuration file")
-    parser.add_argument('-s', nargs=1, help="The emulation scenario file")
-    args = parser.parse_args()
-    
-    try:
-        return args.c[0], args.s[0]
-    except Exception:
-        parser.print_help()
-        sys.exit(0)
+    # Start emulation Manager
+    def start(self, conf_file, scenario_file):
 
-# Read configuration parameters
-def readConfiguration (conf_file):
+        # Read configuration
+        self.__readConfiguration(conf_file)
 
-    config = ConfigParser.ConfigParser()
-    try:
-        config.read(conf_file)
-    except Exception:
-        print("Could not read configuration file: " + conf_file)
-        sys.exit(0)
+        # Init logging
+        self.__initLogging()
 
-    devices_folder = config.get('General', 'devices_folder')
-    sites_folder = config.get('General', 'sites_folder')
-    mqtt_broker_ip =  config.get('General', 'mqtt_broker_ip')
-    mqtt_broker_port = config.get('General', 'mqtt_broker_port')
-    log_file = config.get('General', 'log_file')
-    console_cmd_waiting = config.get('General', 'console_cmd_waiting') 
-    
-    if not console_cmd_waiting.isdigit():
-        print("Error in configuration file: " + conf_file)
-        sys.exit(0)
-    else:
-        console_cmd_waiting = int(console_cmd_waiting)
-    
-    return devices_folder, sites_folder, mqtt_broker_ip, mqtt_broker_port, log_file, console_cmd_waiting
-
-# Check that profiles and configuration data are valid and return ready format configuration to send to each site
-def validateFormatScenario (scenarioConf, allSites, allDevices) : 
-
-    sitesConf = {}
-    for site in scenarioConf:
-        dId = 0
-        if not allSites.has_key(site):
-            senityLogger.error("Site name '" + str(site) +"' not found, check configurations")
-            sys.exit(0)
-        sitesConf[site] = {}
-        for device in allSites[site]:
-            if not allDevices.has_key(device):
-                senityLogger.error("Device name '" + device +"' not found, check configurations")
-                sys.exit(0)
-            sitesConf[site][dId]=allDevices[device]
-            dId = dId + 1
-
-    return sitesConf
-
-# The callback for when the client receives a CONNACK response from the mqtt broker
-def on_connect(client, userdata, flags, rc):
-
-     senityLogger.info("Emulation Manager connected on mqtt broker with result code: " + str(rc))
-
-    # Subscribing in on_connect() means that if we lose the connection and
-    # reconnect othen subscriptions will be renewed
-
-# The callback for when one of the topic messages is received from the mqtt broker
-def on_message(client, userdata, msg):
-    if (con.TOPIC_SITE_CONF + "/") in msg.topic:
-        tmpString = (msg.topic).split("/")
+        # read devices and sites profiles and emulation scenarion configuration
         try:
-            siteId = int(tmpString[1])
-            foundSites.append(siteId)
+            allDevices = getDeviceProfile.getAllDeviceProfiles(self.devices_folder)
+            allSites = getSiteProfile.getAllSiteProfiles(self.sites_folder)
         except Exception:
-             senityLogger.error("Malformed messaged received by Senity emulation manager")
-    elif(con.TOPIC_SITE_DEVICES_CONF + "/" + searchForSiteId) in msg.topic:
-        foundSiteDevices.append(str(msg.payload))
-    #print msg.topic+ " " + str(msg.payload)
+            self.senityLogger.error("Device and/or site profiles could not be loaded.")
+            sys.exit(0)
 
-# Connect to the communication bus
-def connectToCommBus(mqtt_broker_ip, mqtt_broker_port, userdata="") :
+        try:
+            (updateInterval, scenarioConf) = getScenarioConf.getScenarioConf(scenario_file)
+        except Exception:
+            self.senityLogger.error("Scenario configuration could not be loaded.")
+            sys.exit(0)
 
-    # Create, configure mqtt client and connect
-    client = mqtt.Client()
-    client.loop_start()
-    client.on_connect = on_connect
-    client.on_message = on_message
+        # Connect to comm bus
+        self.__connectToCommBus()
 
-    rc = client.connect(mqtt_broker_ip, mqtt_broker_port, 60)
+        # validate data and return sites configuration
+        sitesConf = self.__validateFormatScenario(scenarioConf, allSites, allDevices)
 
-    return client
+        # Create emulated "all in one" sites
+        siteId = 0
+        for site in sitesConf.keys():
+            sp = multiprocessing.Process(target=allInOneSite.startSite, args=(self.mqtt_broker_ip, self.mqtt_broker_port, siteId))
+            self.siteProcs.append(sp)
+            sp.start()
+            self.commBusClient.publish(con.TOPIC_SITE_DEVICES_CONF + "/" + str(siteId), str(sitesConf[site]), retain=True)
+            self.commBusClient.publish(con.TOPIC_SITE_CONF + "/" + str(siteId), str(updateInterval), retain=True)
+            siteId = siteId + 1
 
-# Closing and exiting senity
-def closeSenity(siteProcs):
-    for sp in siteProcs:
-        sp.terminate()
+    # Get communication bus / mqtt details
+    def getConfParams(self):
+        return self.mqtt_broker_ip, self.mqtt_broker_port, self.console_cmd_waiting
 
-# Handle output during console waiting for command to return
-def consoleWaitOutput(console_cmd_waiting):
-    for i in range(console_cmd_waiting):
-        print ".",
-        sys.stdout.flush()
-        time.sleep(0.2)
+    # Init logging functionallity
+    def __initLogging (self):
+        if not self.log_file:
+            logging.propagate = False
+        else:
+            self.senityLogger = logging.getLogger("senity_emulationManager")
+            logging.basicConfig(format='%(asctime)s : %(message)s', filename=self.log_file,level=logging.DEBUG)
 
+    # Read configuration parameters
+    def __readConfiguration (self, conf_file):
 
-global foundSites 
-global searchForSiteId
-global foundSiteDevices
+        config = ConfigParser.ConfigParser()
+        try:
+            config.read(conf_file)
+        except Exception:
+            print("Could not read configuration file: " + conf_file)
+            sys.exit(0)
 
-# Read input parameters
-(conf_file, scenario_file) = parseArguments()
-#print conf_file, scenario_file
+        self.devices_folder = config.get('General', 'devices_folder')
+        self.sites_folder = config.get('General', 'sites_folder')
+        self.mqtt_broker_ip =  config.get('General', 'mqtt_broker_ip')
+        self.mqtt_broker_port = config.get('General', 'mqtt_broker_port')
+        self.log_file = config.get('General', 'log_file')
+        console_cmd_waiting = config.get('General', 'console_cmd_waiting')
 
-# Read configuration
-(devices_folder, sites_folder, mqtt_broker_ip, mqtt_broker_port, log_file, console_cmd_waiting) = readConfiguration(conf_file)
-#print devices_folder, sites_folder, mqtt_broker_ip, mqtt_broker_port
+        if not console_cmd_waiting.isdigit():
+            print("Error in configuration file: " + conf_file)
+            sys.exit(0)
+        else:
+            self.console_cmd_waiting = int(console_cmd_waiting)
 
-# Init logging
-initLogging(log_file)
+    # Check that profiles and configuration data are valid and return ready format configuration to send to each site
+    def __validateFormatScenario (self, scenarioConf, allSites, allDevices) :
 
-# read devices and sites profiles and emulation scenarion configuration
-try:
-    allDevices = getDeviceProfile.getAllDeviceProfiles(devices_folder)
-    allSites = getSiteProfile.getAllSiteProfiles(sites_folder)
-except Exception:
-    senityLogger.error("Device and/or site profiles could not be loaded.")
-    sys.exit(0)
+        sitesConf = {}
+        for site in scenarioConf:
+            dId = 0
+            if not allSites.has_key(site):
+                self.senityLogger.error("Site name '" + str(site) +"' not found, check configurations")
+                sys.exit(0)
+            sitesConf[site] = {}
+            for device in allSites[site]:
+                if not allDevices.has_key(device):
+                    self.senityLogger.error("Device name '" + device +"' not found, check configurations")
+                    sys.exit(0)
+                sitesConf[site][dId]=allDevices[device]
+                dId = dId + 1
 
-try:
-    (updateInterval, scenarioConf) = getScenarioConf.getScenarioConf(scenario_file)
-except Exception:
-    senityLogger.error("Scenario configuration could not be loaded.")
-    sys.exit(0)
+        return sitesConf
 
-# Connect to comm bus
-commBusClient = connectToCommBus(mqtt_broker_ip, mqtt_broker_port)
+    # The callback for when the client receives a CONNACK response from the mqtt broker
+    def __on_connect(self, client, userdata, flags, rc):
 
-# validate data and return sites configuration
-sitesConf = validateFormatScenario(scenarioConf, allSites, allDevices)
+        self.senityLogger.info("Emulation Manager connected on mqtt broker with result code: " + str(rc))
 
-# Create emulated "all in one" sites
-siteProcs = []
-siteId = 0
-for site in sitesConf.keys():
-    sp = multiprocessing.Process(target=allInOneSite.startSite, args=(mqtt_broker_ip, mqtt_broker_port, siteId))
-    siteProcs.append(sp)
-    sp.start()
-    commBusClient.publish(con.TOPIC_SITE_DEVICES_CONF + "/" + str(siteId), str(sitesConf[site]), retain=True)
-    commBusClient.publish(con.TOPIC_SITE_CONF + "/" + str(siteId), str(updateInterval), retain=True)
-    siteId = siteId + 1
+        # Subscribing in on_connect() means that if we lose the connection and
+        # reconnect othen subscriptions will be renewed
 
-# Start console
+    # The callback for when one of the topic messages is received from the mqtt broker
+    def __on_message(self, client, userdata, msg):
 
-# Available commands
-availableCommands = ["sites", "site", "site add", "site delete", "device", "device on", "device off", "consumption", "help", "exit"]
-Completer = WordCompleter(availableCommands)
+        pass
 
-# Console loop
-memHistory = InMemoryHistory()
-while True:
-    # Handle the case where the commands has multiple arguments
-    cmdFull = prompt(unicode(con.CONSOLE_PROMPT), history=memHistory, completer=Completer)
-    cmdSplit = cmdFull.split()
-    if not cmdFull == "": 
-        cmd = cmdSplit[0]
-    else:
-        continue
+    # Connect to the communication bus
+    def __connectToCommBus(self, userdata="") :
 
-    if cmd in availableCommands: 
-        if cmd == "exit" :
-            print("'There is a kind of senity in love which is almost a paradise'")
-            break
-        elif cmd == "help" :
-            print("Available commands: " + str(availableCommands))
-        elif cmd == "sites":
-            foundSites = []
-            commBusClient.subscribe(con.TOPIC_SITE_CONF + "/#")
-            consoleWaitOutput(console_cmd_waiting)
-            print "\nSites found: " + str(foundSites)
-        elif "site":
-            if(len(cmdSplit) == 2 and re.match('(\d+)', cmdSplit[1])): 
-                searchForSiteId = cmdSplit[1]
-                foundSiteDevices = []
-                commBusClient.subscribe(con.TOPIC_SITE_DEVICES_CONF + "/" + searchForSiteId)
-                consoleWaitOutput(console_cmd_waiting)
-                print "\nDevices found in Site " + str(searchForSiteId) + " :\n" + str(foundSiteDevices)
-            else:
-                print "Wrong syntax: site <site id>"
-        elif "device":
-            print cmdSplit
-            if(len(cmdSplit) == 2 and re.match('(\d+)/(\d+)', cmdSplit[1])): 
-                print cmdFull  
-            elif(len(cmdSplit) == 3 and  cmdSplit[1].lower() == "on" and re.match('(\d+)/(\d+)', cmdSplit[2])):
-                print "on"
-            elif(len(cmdSplit) == 3 and  cmdSplit[1].lower() == "off" and re.match('(\d+)/(\d+)', cmdSplit[2])):
-                print "off"
-            else:
-                print "Wrong syntax: devices <site id>"
-    else:
-        print("Command not found")
+        # Create, configure mqtt client and connect
+        self.commBusClient.loop_start()
+        self.commBusClient.on_connect = self.__on_connect
+        self.commBusClient.on_message = self.__on_message
 
-# Close senity
-closeSenity(siteProcs)
+        try:
+            rc = self.commBusClient.connect(self.mqtt_broker_ip, self.mqtt_broker_port, 60)
+        except Exception:
+            self.senityLogger.error("Error while conencting to communication bus. Check whether the respective service is running.")
+            print("Error while conencting to communication bus. Check whether the respective service is running.")
+            sys.exit(0)
+
+    # Closing and exiting emulation Manager
+    def closeSenity(self):
+        for sp in self.siteProcs:
+            sp.terminate()
+
