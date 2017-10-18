@@ -4,6 +4,11 @@ import os
 import sys
 import logging
 
+# The web handler (mainly created so as to mute the server's log messages)
+class webHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
+    def log_message(self, format, *args):
+        return
+
 # Senity's web server
 class uiWebServer:
 
@@ -14,11 +19,11 @@ class uiWebServer:
 
     def start(self):
 
+        handler = webHandler
         try:
             webDir = os.path.join(os.path.dirname(__file__), self.baseDir)
             os.chdir(webDir)
 
-            handler = SimpleHTTPServer.SimpleHTTPRequestHandler
             httpd = SocketServer.TCPServer(("", self.port), handler)
             httpd.serve_forever()
         except Exception:

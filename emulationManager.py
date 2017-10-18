@@ -26,6 +26,7 @@ class emulationManager:
         self.websocket_broker_port = 0
         self.log_file = ""
         self.siteProcs = []
+        self.siteIds = []
 
     # Start emulation Manager
     def start(self, scenario_file, devices_folder, sites_folder, mqtt_broker_ip, mqtt_broker_port, websocket_broker_port, log_file):
@@ -72,6 +73,7 @@ class emulationManager:
             sp.start()
             self.commBusClient.publish(con.TOPIC_SITE_DEVICES_CONF + "/" + str(siteId), str(sitesConf[site]), retain=True)
             self.commBusClient.publish(con.TOPIC_SITE_CONF + "/" + str(siteId), str(updateInterval), retain=True)
+            self.siteIds.append(siteId)
             siteId = siteId + 1
 
     # Init logging functionallity
@@ -91,12 +93,12 @@ class emulationManager:
             if not allSites.has_key(site):
                 self.senityLogger.error("Site name '" + str(site) +"' not found, check configurations")
                 sys.exit(0)
-            sitesConf[site + "_" + str(sId)] = {}
+            sitesConf[sId] = {}
             for device in allSites[site]:
                 if not allDevices.has_key(device):
                     self.senityLogger.error("Device name '" + device +"' not found, check configurations")
                     sys.exit(0)
-                sitesConf[site + "_" + str(sId)][dId]=allDevices[device]
+                sitesConf[sId][dId]=allDevices[device]
                 dId = dId + 1
             sId = sId + 1
         return sitesConf
@@ -152,6 +154,11 @@ class emulationManager:
 
     # Closing and exiting emulation Manager
     def closeSenity(self):
+        # Terminate processes
         for sp in self.siteProcs:
             sp.terminate()
+        # Remove retained msgs
+        for siteId in self.siteIds:
+            self.commBusClient.publish(con.TOPIC_SITE_DEVICES_CONF + "/" + str(siteId), '', retain=True)
+            self.commBusClient.publish(con.TOPIC_SITE_CONF + "/" + str(siteId), '', retain=True)
 
