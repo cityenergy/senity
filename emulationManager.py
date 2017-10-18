@@ -12,6 +12,7 @@ import ConfigParser
 import argparse
 import logging
 import time
+import socket
 
 class emulationManager:
 
@@ -22,15 +23,20 @@ class emulationManager:
         self.sites_folder = ""
         self.mqtt_broker_ip = ""
         self.mqtt_broker_port = 0
+        self.websocket_broker_port = 0
         self.log_file = ""
-        self.console_cmd_waiting = ""
         self.siteProcs = []
 
     # Start emulation Manager
-    def start(self, conf_file, scenario_file):
+    def start(self, scenario_file, devices_folder, sites_folder, mqtt_broker_ip, mqtt_broker_port, websocket_broker_port, log_file):
 
-        # Read configuration
-        self.__readConfiguration(conf_file)
+        # Configuration paramaters
+        self.devices_folder = devices_folder 
+        self.sites_folder = sites_folder
+        self.mqtt_broker_ip = mqtt_broker_ip
+        self.mqtt_broker_port = mqtt_broker_port  
+        self.websocket_broker_port = websocket_broker_port 
+        self.log_file = log_file
 
         # Init logging
         self.__initLogging()
@@ -49,6 +55,9 @@ class emulationManager:
             self.senityLogger.error("Scenario configuration could not be loaded.")
             sys.exit(0)
 
+        # Check connectivity to communication bus 
+        self.__checkMqttBrokerStatus()
+
         # Connect to comm bus
         self.__connectToCommBus()
 
@@ -65,10 +74,6 @@ class emulationManager:
             self.commBusClient.publish(con.TOPIC_SITE_CONF + "/" + str(siteId), str(updateInterval), retain=True)
             siteId = siteId + 1
 
-    # Get communication bus / mqtt details
-    def getConfParams(self):
-        return self.mqtt_broker_ip, self.mqtt_broker_port, self.console_cmd_waiting
-
     # Init logging functionallity
     def __initLogging (self):
         if not self.log_file:
@@ -77,46 +82,23 @@ class emulationManager:
             self.senityLogger = logging.getLogger("senity_emulationManager")
             logging.basicConfig(format='%(asctime)s : %(message)s', filename=self.log_file,level=logging.DEBUG)
 
-    # Read configuration parameters
-    def __readConfiguration (self, conf_file):
-
-        config = ConfigParser.ConfigParser()
-        try:
-            config.read(conf_file)
-        except Exception:
-            print("Could not read configuration file: " + conf_file)
-            sys.exit(0)
-
-        self.devices_folder = config.get('General', 'devices_folder')
-        self.sites_folder = config.get('General', 'sites_folder')
-        self.mqtt_broker_ip =  config.get('General', 'mqtt_broker_ip')
-        self.mqtt_broker_port = config.get('General', 'mqtt_broker_port')
-        self.log_file = config.get('General', 'log_file')
-        console_cmd_waiting = config.get('General', 'console_cmd_waiting')
-
-        if not console_cmd_waiting.isdigit():
-            print("Error in configuration file: " + conf_file)
-            sys.exit(0)
-        else:
-            self.console_cmd_waiting = int(console_cmd_waiting)
-
     # Check that profiles and configuration data are valid and return ready format configuration to send to each site
     def __validateFormatScenario (self, scenarioConf, allSites, allDevices) :
-
         sitesConf = {}
+        sId = 0
         for site in scenarioConf:
             dId = 0
             if not allSites.has_key(site):
                 self.senityLogger.error("Site name '" + str(site) +"' not found, check configurations")
                 sys.exit(0)
-            sitesConf[site] = {}
+            sitesConf[site + "_" + str(sId)] = {}
             for device in allSites[site]:
                 if not allDevices.has_key(device):
                     self.senityLogger.error("Device name '" + device +"' not found, check configurations")
                     sys.exit(0)
-                sitesConf[site][dId]=allDevices[device]
+                sitesConf[site + "_" + str(sId)][dId]=allDevices[device]
                 dId = dId + 1
-
+            sId = sId + 1
         return sitesConf
 
     # The callback for when the client receives a CONNACK response from the mqtt broker
@@ -143,9 +125,30 @@ class emulationManager:
         try:
             rc = self.commBusClient.connect(self.mqtt_broker_ip, self.mqtt_broker_port, 60)
         except Exception:
-            self.senityLogger.error("Error while conencting to communication bus. Check whether the respective service is running.")
-            print("Error while conencting to communication bus. Check whether the respective service is running.")
+            self.senityLogger.error("Error while connecting to communication bus. Check whether the respective service is running.")
+            print("Error while connecting to communication bus. Check whether the respective service is running.")
             sys.exit(0)
+
+    # Check that mqtt broker is up and running
+    def __checkMqttBrokerStatus(self):
+        sMqtt = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            sMqtt.connect((str(self.mqtt_broker_ip), int(self.mqtt_broker_port)))
+        except Exception as e:
+            self.senityLogger.error("Error while connecting to communication bus. Check whether the respective entity is running.")
+            print("Error while connecting to communication bus. Check whether the respective entity is running.")
+            sys.exit(0)
+        finally:
+            sMqtt.close()
+
+        sWebsocket = socket.socket()
+        try:
+            sWebsocket.connect((str(self.mqtt_broker_ip), int(self.websocket_broker_port)))
+        except Exception as e:
+            self.senityLogger.error("Websocket support is not enabled in the mqtt broket. Senity's UI functionallity will not operate normally.")
+            print("Websocket support is not enabled in the mqtt broket. Senity's UI functionallity will not operate normally.")
+        finally:
+            sWebsocket.close()
 
     # Closing and exiting emulation Manager
     def closeSenity(self):

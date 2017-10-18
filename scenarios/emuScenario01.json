@@ -4,6 +4,6 @@
   "sitesAvailable": 
   [ 
     {"siteName": "site01", "siteCounter": 10 },
-    {"siteName": "site02", "siteCounter": 20 }
+    {"siteName": "site02", "siteCounter": 10 }
   ]
 }
