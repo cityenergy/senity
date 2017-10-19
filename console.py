@@ -49,6 +49,8 @@ class console :
             self.foundSiteDevices.append(str(msg.payload))
         elif(con.TOPIC_SITE_DEVICE_CONSUMPTION + "/" + str(self.siteDeviceId)) in msg.topic:
             self.deviceConsumptionData.append(str(msg.payload))
+        elif(con.TOPIC_SITE_CONSUMPTION + "/" + str(self.searchForSiteId)) in msg.topic:
+            self.siteConsumptionData.append(str(msg.payload))
 
     # Connect to the communication bus
     def __connectToCommBus(self, userdata="") :
@@ -74,7 +76,7 @@ class console :
         self.__connectToCommBus()    
 
         # Available commands
-        availableCommands = ["sites", "site", "device_on", "device_off", "device_consumption", "help", "exit"]
+        availableCommands = ["sites", "site", "site_consumption", "device_on", "device_off", "device_consumption", "help", "exit"]
         Completer = WordCompleter(availableCommands)
 
         # Console loop
@@ -134,6 +136,16 @@ class console :
                         self.siteDeviceId = -1
                     else:
                         print("Wrong syntax: device_consumption <site id>/<device id>")
+                elif cmd == "site_consumption":
+                    if(len(cmdSplit) == 2 and re.match('(\d+)', cmdSplit[1])):
+                        self.searchForSiteId = cmdSplit[1]
+                        self.siteConsumptionData = []
+                        self.commBusClient.subscribe(con.TOPIC_SITE_CONSUMPTION + "/" + str(self.searchForSiteId))
+                        self.__consoleWaitOutput()
+                        self.commBusClient.unsubscribe(con.TOPIC_SITE_CONSUMPTION + "/" + str(self.searchForSiteId))
+                        print("\nSite " + str(self.searchForSiteId) + " consumption :\n" + str(self.siteConsumptionData))
+                    else:
+                        print("Wrong syntax: site_consumption <site id>")
             else:
                 print("Command not found")     
 

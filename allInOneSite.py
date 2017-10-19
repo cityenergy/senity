@@ -78,10 +78,18 @@ class allInOneSite:
 
     # Run the devices
     def __runDevices (self):
-
+        
+        siteConsumption = 0
+        
+        # Publish devices' consumption
         for dId in self.siteDevices.keys():
             if self.siteDevices[dId]['status'] == 1 :
-                self.client.publish(con.TOPIC_SITE_DEVICE_CONSUMPTION + "/" + str(self.sId) + "/" + str(dId), str(self.siteDevices[dId]['avgConsumption']) )
+                deviceConsumption = self.siteDevices[dId]['avgConsumption']
+                self.client.publish(con.TOPIC_SITE_DEVICE_CONSUMPTION + "/" + str(self.sId) + "/" + str(dId), str(deviceConsumption) )
+                siteConsumption = siteConsumption + deviceConsumption
+
+        # Publish site consumption   
+        self.client.publish(con.TOPIC_SITE_CONSUMPTION + "/" + str(self.sId), str(siteConsumption) )
 
     # Run "all in one" site main function
     def runSite (self, mqtt_broker_ip, mqtt_broker_port, siteId) :
