@@ -69,10 +69,13 @@ class allInOneSite:
                 deviceId = int(tmpString[2])
             except Exception:
                 self.senityLogger.error("Malformed messaged received in site: " + str(self.sId))
-            self.siteDevices[deviceId]["status"] = msgPayload
-            self.senityLogger.info("Site " + str(self.sId) + " device " + str(deviceId) + " status update received: " + str(self.siteDevices[int(deviceId)]["status"]))
-            # publish new site devices configuration
-            self.client.publish(con.TOPIC_SITE_DEVICES_CONF + "/" + str(self.sId), str(self.siteDevices), retain=True) 
+            if deviceId in self.siteDevices.keys():
+                self.siteDevices[deviceId]["status"] = msgPayload
+                self.senityLogger.info("Site " + str(self.sId) + " device " + str(deviceId) + " status update received: " + str(self.siteDevices[int(deviceId)]["status"]))
+                # publish new site devices configuration
+                self.client.publish(con.TOPIC_SITE_DEVICES_CONF + "/" + str(self.sId), str(self.siteDevices), retain=True) 
+            else:
+                self.senityLogger.error("Site " + str(self.sId) + " received msg for non existing device: " + str(deviceId))
         else:
             self.senityLogger.info(msg.topic)
 
