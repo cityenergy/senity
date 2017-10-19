@@ -37,7 +37,7 @@ def readConfiguration (conf_file):
     mqtt_broker_port = config.get('General', 'mqtt_broker_port')
     websocket_broker_port = config.get('General', 'websocket_broker_port')
     log_file = config.get('General', 'log_file')
-    enable_ui = bool(int(config.get('Web', 'enable_ui')))
+    enable_ui = config.get('Web', 'enable_ui')
     web_port = int(config.get('Web', 'web_port'))
     base_dir = config.get('Web', 'base_dir')
 
