@@ -8,7 +8,7 @@ import paho.mqtt.client as mqtt
 import logging
 import multiprocessing
 import random
-from apscheduler.schedulers.background import BackgroundScheduler
+import time
 
 ## mqtt broker settings
 #if len(sys.argv) < 2 :
@@ -23,9 +23,9 @@ class allInOneSite:
     def __init__(self):
         self.sId = 0
         self.siteDevices = {}
-        self.scheduler = BackgroundScheduler()
         self.client = mqtt.Client()
         self.senityLogger = logging.getLogger("senity_allInOneSite")
+        self.updateInterval = 0
 
     # The callback for when the self.client receives a CONNACK response from the mqtt broker
     def __on_connect(self, client, userdata, flags, rc):
@@ -59,10 +59,8 @@ class allInOneSite:
 
         # Site overall configuration
         elif msg.topic == con.TOPIC_SITE_CONF + "/" + str(self.sId):
-            updateInterval = msgPayload
-            self.scheduler.remove_job(con.MAIN_SITE_PERIODIC_JOB)
-            self.scheduler.add_job(self.__runDevices, 'interval', seconds=updateInterval, id = con.MAIN_SITE_PERIODIC_JOB)
-            self.senityLogger.info("Site " + str(self.sId) + " update interval to: " + str(updateInterval))
+            self.updateInterval = int(msgPayload)
+            self.senityLogger.info("Site " + str(self.sId) + " update interval to: " + str(self.updateInterval))
 
         # Update device status (on/off)
         elif (con.TOPIC_SITE_DEVICE_STATUS + "/" + str(self.sId)) in msg.topic:
@@ -92,24 +90,18 @@ class allInOneSite:
 
         # Run Scheduler
         ch = logging.NullHandler()
-        logging.getLogger('apscheduler.scheduler').addHandler(ch)
-        logging.getLogger('apscheduler.scheduler').propagate = False
-        self.scheduler.start()
 
         # Create, configure mqtt self.client and connect
         self.client.loop_start()
         self.client.on_connect = self.__on_connect
         self.client.on_message = self.__on_message
-
-        job = self.scheduler.add_job(self.__runDevices, 'interval', id = con.MAIN_SITE_PERIODIC_JOB)
-
         rc = self.client.connect(mqtt_broker_ip, mqtt_broker_port, 60)
-
-        # Blocking call that processes network traffic, dispatches callbacks and
-        # handles reconnecting.
-        # Other loop*() functions are available that give a threaded interface and a
-        # manual interface.
-        self.client.loop_forever()
+        
+        # Loop
+        while 1:
+           self.__runDevices()
+           time.sleep(self.updateInterval)
+                      
 
 def startSite(mqtt_broker_ip, mqtt_broker_port, siteId) :
 

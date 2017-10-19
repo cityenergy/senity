@@ -26,6 +26,7 @@ class emulationManager:
         self.websocket_broker_port = 0
         self.log_file = ""
         self.siteProcs = []
+        self.siteIds = []
 
     # Start emulation Manager
     def start(self, scenario_file, devices_folder, sites_folder, mqtt_broker_ip, mqtt_broker_port, websocket_broker_port, log_file):
@@ -72,6 +73,7 @@ class emulationManager:
             sp.start()
             self.commBusClient.publish(con.TOPIC_SITE_DEVICES_CONF + "/" + str(siteId), str(sitesConf[site]), retain=True)
             self.commBusClient.publish(con.TOPIC_SITE_CONF + "/" + str(siteId), str(updateInterval), retain=True)
+            self.siteIds.append(siteId)
             siteId = siteId + 1
 
     # Init logging functionallity
@@ -152,6 +154,13 @@ class emulationManager:
 
     # Closing and exiting emulation Manager
     def closeSenity(self):
+        # Close site processes
         for sp in self.siteProcs:
             sp.terminate()
+
+        # Remove retained entries before closing
+        for siteId in self.siteIds:
+            self.commBusClient.publish(con.TOPIC_SITE_DEVICES_CONF + "/" + str(siteId), "", retain=True)
+            self.commBusClient.publish(con.TOPIC_SITE_CONF + "/" + str(siteId), "", retain=True)
+        
 

@@ -3,7 +3,7 @@
   "updateInterval": 5,
   "sitesAvailable": 
   [ 
-    {"siteName": "site01", "siteCounter": 10 },
-    {"siteName": "site02", "siteCounter": 10 }
+    {"siteName": "site01", "siteCounter": 1 },
+    {"siteName": "site02", "siteCounter": 20 }
   ]
 }
