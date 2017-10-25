@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>SENITY</title>
+
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+  <script src="http://code.highcharts.com/highcharts.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.js" type="text/javascript"></script> 
+  <script src="dashboard.js"></script>
+  <script src="moment.js"></script>
+  
+  <style>
+    body {
+      background-image: url(bg.jpg);
+      background-repeat: no-repeat;
+      background-size: cover;
+      overflow-x: hidden; 
+    }
+    h1.panel-title {
+      font-size: 48px;
+    }
+    h2.panel-title {
+      font-size: 30px;
+    }
+    .panel-transparent {
+      background: none;
+    }
+    .panel-default > .panel-heading {
+    }  
+  </style>
+
+</head>
+
+<body>
+
+<input type="hidden" id="totalCityConsumptionValue" value="0" />
+
+<div class="row">
+    <div class="col-sm-1"></div>
+    <div class="col-sm-7"><img src="logo.png" alt="SENITY"></div>
+    <div class="col-sm-4"></div>
+</div>
+
+<br>
+
+<div class="row">
+    <div class="col-sm-1"></div>
+    <div class="col-sm-7" id="totalCityConsumptionChart"></div>
+    <div class="col-sm-1"></div>
+    <div class="col-sm-3">
+    
+    <br>
+    <div class="row">
+      <div class="col-sm-1"></div>
+      <div class="col-sm-8">    
+        <div class="panel panel-default panel-transparent" >
+          <div class="panel-heading" ><h2 class="panel-title"># sites</h2></div>
+          <div class="panel-body"><h1 class="panel-title"><div id="numberOfSites">0</div></h1></div>
+        </div>
+        <br>
+        <div class="panel panel-default panel-transparent">
+          <div class="panel-heading"><h2 class="panel-title"># devices</h2></div>
+          <div class="panel-body"><h1 class="panel-title"><div id="numberOfAppliances">0</div></h1></div>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-3"></div>
+    </div>
+</div>
+
+
+</body>
+</html>
