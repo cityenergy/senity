@@ -1,25 +1,3 @@
 ## Synopsis
 
-Senity is an emulator for smart energy grids 
-
-
-## Features to build
-1. CLI interface
-2. put in db
-3. add device profiles, express consumption in mathematic way through a scripting like manner
-5. deamon
-6. define in scenario group actions/policies, e.g. based on device type. Such actions/policies may indicate when ovens are usually on, or how many times a day
-7. override device characteristics in scenario (?)
-8. time synchronization
-9. scalability and handling of defunc process
-10. simple basic web UI
-11. adding testing functionality
-12. packaging of the whole thing
-14. Yang files for device abstractions
-
-other:
-- remove trash msgs from log
-- make console a separate file and abstract through constants the cmd names
-- Clear mqtt broker old msg
-- [TBD] utilize device's update interval
-- [TBD] utilize workingcycle
+SENITY is an emulator for smart energy deployments targeting city environments.
