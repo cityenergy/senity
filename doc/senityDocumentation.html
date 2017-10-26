@@ -7,91 +7,69 @@
 
 <h2>Introduction</h2>
 <p>
-SENITY is an emulator for smart energy deployments targeting city environments. In this context, it can emulate sites (apartments, buildings etc) that contain a smart energy meter, smart energy devices and appliances and any kind of renewable sources. SENITY is by design enabled to interact (or even integrate) with actuall energy related systems for DR, forecasting and energy pricing, real devices capable of reporting their energy profiles and to receive commands and other kind of energy related hardware and software systems. In this way it is possible to evaluate the operational, functional, algorithmic behaviour and performance of the respective entities in emulated large scale setups, where various scenarios (weather, energy usage) can be easily configured.
+SENITY is an emulator for smart energy deployments targeting city environments. It can emulate sites that contain a smart energy meter, smart energy devices and appliances. Its goal is to become a mininet-like tool promoting research in the respective field, making possible to evaluate algorithms, energy models and complete energy systems (e.g. for demand/response, pricing etc), in various city scenarios.
 </p>
 
 <h2>Architecture</h2>
-The overall architecture of the system is presented in the following figure. Generally, most entity have two parts (logical or actual), one that relates with the emulation and the one that relates to the actual device or site behavior. 
-<br>
-<img src="architecture.png" alt="Senity Architecture" style="width:20cm;height:7cm;">
-<br>
-Three basic design variations can be considered for the <b>device</b>, <b>smart meter/gateway</b>, <b>site</b> entities: 
+SENITY constis of the following entities:
 <ol>
-	<li> "allInOne" where all these entities are emulated through a single program (e.g., a process)
-	<li> "oneToOne" where all these entities are emulated through different programs (e.g., different processes running in a container)
-	<li> "realOne" where all or some of these entities are actual ones: e.g. an actual device, an openhab gateway (or even a VIMSEN ldrm etc.)
+	<li>Site: For the site we follow the "allInOne" approach where all of a site's entities are emulated in single process.
+	<li>Emulation Manager: The Emulation Manager is responsible for setting up a particular scenario with a number of sites, devices and energy profiles.
+	<li>Communication Bus: All the entities interact through the Communication Bus, exchanging measurements and commands.
+	<li>Console: Through Console a user is able to control an emulation scenario, e.g. by turning on and off devices and also get infomration regarding the sites, the devices and their status.
+	<li>UI: UI presents various statistics.
 </ol>
 
-Also, <b>Devices</b> can operate in various modes based on the configuration received so as to reflect energy consumption or production of actual devices: 
-<ol>
-  <li> continuous: a device may follow a daily scenario (e.g. expressed in a mathematical form)
-  <li> periodic: operate at particular time periods (in the day, in the week etc) with particular consumption profile when it is on
-  <li> conditional/eventful: where the consumption or production of a device depends on other factors (e.g. weather).
-</ol>
-In any case a device can be set on or off by hand (e.g., through the <b>senity-console</b>, or <b>senity-ui</b>) or by a VIMSEN like system. 
 
-<br><br>
-All the entities interact through the <b>Communication Bus</b>, exchanging measurements and commands, with the exception of the devices that is possible also to communicate and be controlled through the gateway or smart meter. In this case the gateway or smart meter will translate commands (e.g. read from the communication bus) to specific commands (e.g., netconf) for the devices, hiding in this way the devices' particularities. (This is also what happens in VIMSEN with ldrm though in practice everything happen through the MQTT broker that acts as a communication bus).
-The Communication Bus in the simplest form can be an mqqt broker, or multiple ones (e.g. one for the emulation-configuration data and one of the "actual" data) or sth more advanced like an Apache Kafka.
-
-<br><br>
-The <b>Emulation Manager</b> is responsible for setting up a particular scenario with a number of houses, devices and energy profiles. We can consider two modes of emulation operation:
-<ol>
-  <li> centralized: where all emulation decision on,off,advertized consumption/production is centrally decided (which actually does not seem very nice)
-  <li> distributed: where the emulation manager sends configuration parameters and the devices/sites "act" autonomously.
-</ol>
-
-<br>
-The <b>City Modeler</b> is not actually part of SENITY but is referenced here for completeness purposes. The City Modeler emulates/models a city and events like weather, the movement of population, city density, damage in particular areas etc. It could interface,  integrate or embed a city game (like simcity). The modeler's static or dynamic data are received from the Emulation Manager and "translated" to emulation configurations (on, off, consumption, production etc), using the devives' conditional/eventful mode of operation. Of course the exact details of what is decided on the City Modeler and what on the Emulation Manager is a matter of further dicussion.
-
-<h2>Operational Flow</h2>
+<h2>Implementation</h2>
+<h3>Operational Flow</h3>
 The overall operation flow of SENITY is described below:
-<ol>
-  <li> A scenario is defined in json/xml/yang or any other format, utilizing on existing site and device configurations
-  <li> The emulator reads the scenario and creates the respective emulated entities (sites, devices)
-  <li> The emulator passes through the communication bus the necessary conf info and configures the other software components (e.g. db, communication bus)
-  <li> The sites are initiated and start operating sending consumption data and reacting to commands
-  <li> Events (weather, time of day etc, on/off commands) are send by the emulator through the communication bus and the devices act accordingly
-</ol>
-
-
-<h2>Proof of Concept (PoC)</h2>
-
-<h3> Code and Implementation</h3>
-The Proof of Concept (PoC) is implemented in Python and is hosted in bitbucket:
 <ul>
-  <li> Sites (allInOneSite.py) follow the <i>allInOne</i> mode of operation and each site is represented as a single process. The devices operate in <i>continuous</i> mode.
-  <li> The emulation manager (emulationManager.py) operates in <i>distributed</i> mode.
-  <li> The senity-console (senity.py) is provided for interacting with the emulation environment
-  <li> The emulation is initated through the senity.py
-  <li> The communication bus is a mqtt broker (Mosquitto).
+	<li>Site and device configurations in json format are created.
+	<li>A scenario is defined in json, utilizing existing site and device configurations.
+	<li>The emulator reads the scenario and creates the respective emulated entities (sites, devices).
+	<li>The emulator passes through the communication bus the necessary conf info and configures the other software components.
+	<li>The sites are initiated and start operating sending consumption data and reacting to commands.
+	<li>Events (weather, time of day etc, on/off commands) are send by the emulator through the communication bus and the devices act accordingly.
 </ul>
-
 
 <h3> Configuration files</h3>
 
 SENITY has a configuration file:
 <pre style= "white-space: pre-wrap; background: grey; width: 55%">
 <font color="white">
-  # this is the configuration file for senity
+	# this is the configuration file for senity
 
-  [General]
+	[General]
 
-  # the folder where device profiles are located
-  devices_folder = devices
+	# the folder where device profiles are located
+	devices_folder = devices
 
-  # the folder where site descirptions are located
-  sites_folder = sites
+	# the folder where site descirptions are located
+	sites_folder = sites
 
-  # the file holding the log file, if empty logging is disabled
-  log_file = senity.log
+	# the file holding the log file, if empty logging is disabled
+	log_file = senity.log
 
-  # the waiting time for a console command, which interacts with the mqtt
-  console_cmd_waiting = 10
+	# the mqtt broker ip, mqtt port and websocket port
+	mqtt_broker_ip = 127.0.0.1
+	mqtt_broker_port = 1883
+	websocket_broker_port = 9001
 
-  # the mqtt broker ip and port
-  mqtt_broker_ip = 127.0.0.1
-  mqtt_broker_port = 1883
+	[Console]
+	# the waiting time for a console command, which interacts with the mqtt
+	console_cmd_waiting = 10
+
+	[Web]
+
+	# enable web ui
+	enable_ui = 1
+
+	# web port
+	web_port = 8080
+
+	# directory where web files are located
+	base_dir = ui
 </font>
 </pre>
 
@@ -144,7 +122,7 @@ The <b>scenario json</b>
 </pre>
 
 <h3>Communication messages</h3>
-Communication takes places using the communication bus and respective messages are exchanged between the various entities. Third party entites (like VIMSEN, City Modeler) can interact with SENITY through the communication bus in order to receive the status and send commands. Messages exchanged are:
+Communication takes places using the communication bus and respective messages are exchanged between the various entities. Third party entites can interact with SENITY through the communication bus in order to receive the status and send commands. Messages exchanged are:
 <ol> 
   <li> for configuration purposes
   <li> for scenario setup purposes
@@ -162,13 +140,17 @@ This is published from the Emulation Manager and is read by the respective site.
 This is published from any entity to switch on/off a device. This also leads to updating the site’s devices configuration by the device (not the Emulation Manager as before) sending an updated con.TOPIC_SITE_DEVICES_CONF message
   <li> Topic: con.TOPIC_SITE_DEVICE_CONSUMPTION,  message: energy consumption, retain: false, type: operation related<br>
   This is published from a device, advertising its current energy consumption.
+  <li> Topic: con.TOPIC_SITE_CONSUMPTION,  message: energy consumption, retain: false, type: operation related<br>
+  This is published from the site, advertising the current energy consumption of all the devices in the site.
 </ul>
 
-<h3>Installation</h3>
-First install and start Mosquitto mqtt broker. Then get the source code files from bitbucket and try to run SENITY. 
-A number of python related libraries will be probably missing (paho.mqtt, prompt_toolkit, apscheduler). 
 
-<h3>Usage</h3>
+<h2>Setup and Run</h2>
+
+<h3>Setup</h3>
+To setup the environment one needs to i) get the files, ii) install and run mosquitto mqtt broker, using the latest source and compiling/running with websocket support, iii) install necessary python libraries (e.g., paho, prompt_toolkit), iv) in the ui/dashboard.js setup the ip of your machine
+
+<h3>Console</h3>
 In what follows we present an example use of SENITY through the senity-console.
 
 <pre style= "white-space: pre-wrap; background: grey; width: 55%">
@@ -205,9 +187,13 @@ Device 0/0 consumption :
 </font>
 </pre>
 
+<h3>UI</h3>
+One can also use the UI to view the total consumption, the number of sites and devices in the emulation. Turning on/off a device will lead to total power consumption reduction.
+<br> <br>
+<img src="UI.png" alt="Senity UI">
+<br>
 
-
-<h2>Other issues/thoughts</h2>
+<h2>Issues</h2>
 <ul>
  <li> Installation procedures will be reconsidered, while a containirized version of SENITY is also in our plans.
  <li> Add device profiles, express consumption in mathematic way through a scripting like manner
@@ -216,5 +202,9 @@ Device 0/0 consumption :
  <li> In oneToOne mode the device characteristics could be expressed through Yang \& configured through netconf.
 </ul>  
 
+<h2>Tasks</h2>
+
+<h2>Contact</h2>
+Panagiotis Kokkinos, kokkinop@gmail.com
 </body>
 </html>
