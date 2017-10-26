@@ -6,6 +6,7 @@ import socket
 import argparse
 import multiprocessing
 import ConfigParser
+import sys
 
 # Parse command line arguments
 def parseArguments ():
