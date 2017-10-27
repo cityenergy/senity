@@ -73,10 +73,10 @@ SENITY has a configuration file:
 </font>
 </pre>
 
-In the PoC for simplicity reasons we do not have a db instead local jsons hold the necessary information. In particular, the following json files are defined:
+In the current implementation for simplicity reasons we do not have a db instead local jsons hold the necessary information. In particular, the following json files are defined:
 
 <br><br>
-In a <b>device json file</b>, the avgConsomption is in watts, while the workingCycle indicates whether the device operates 24/24 or a shorter cycle every time it is invoked e.g. 5/24. InitialStatus indicates whether the device is on(1) or off (0) when the emulations is started or by default. updateInterval is the interval with which measurement are sent by the device, and overide the per site updateInterval. In PoC the updateInterval (per device) and workingCycle parameters are not used, instead all the devices update interval is defined throuh the corresponding command sent from the emulation manager for the whole site, while each device working cycle is considered 24/24.
+In a <b>device json file</b>, the avgConsomption is in watts, while the workingCycle indicates whether the device operates 24/24 or a shorter cycle every time it is invoked e.g. 5/24. InitialStatus indicates whether the device is on(1) or off (0) when the emulations is started or by default. updateInterval is the interval with which measurement are sent by the device, and overide the per site updateInterval. In current version the updateInterval (per device) and workingCycle parameters are not used, instead all the devices update interval is defined throuh the corresponding command sent from the emulation manager for the whole site, while each device working cycle is considered 24/24.
 
 <pre style= "white-space: pre-wrap; background: grey; width: 55%">
 <font color="white">
@@ -130,7 +130,7 @@ Communication takes places using the communication bus and respective messages a
   <li> for advertising the measurements
 </ol>
 
-In particular, the following topics are used in PoC, while their exact format can change through the constants.py (aka con) file :
+In particular, the following topics are used, while their exact format can change through the constants.py (aka con) file :
 <ul>
    <li> Topic: con.TOPIC_SITE_DEVICES_CONF/&lt;site id&gt;, message: An array of the site’s devices’ json files, retain: true, type: emulation related <br> 
 This is published from the Emulation Manager and is read by the respective site. We used this way of initially configuring the site entities (instead of giving input parameters) as a more generic approach that can also be used in other modes of operation, except the “all in one” sites. Also, in this way it is also possible to change/update the configuration of a site. This is retained so it is possible for a site to reinitialize after a possible restart, without the Emulation Manager to sent anything, while this message can (and it actually is) be used by UI/CLI/API to get the available sites, devices and their status.
@@ -148,7 +148,20 @@ This is published from any entity to switch on/off a device. This also leads to 
 <h2>Setup and Run</h2>
 
 <h3>Setup</h3>
-To setup the environment one needs to i) get the files, ii) install and run mosquitto mqtt broker, using the latest source and compiling/running with websocket support, iii) install necessary python libraries (e.g., paho, prompt_toolkit), iv) in the ui/dashboard.js setup the ip of your machine
+To setup the environment one needs to 
+<ul>
+	<li> get the files
+	<li> Install and run mosquitto mqtt broker, using the latest source (tested with 1.4.x) and compiling/running with websocket support. This is important, installing mosquitto through apt-get will not work due to incompatibility issues with paho-client and no support for websockets (requried for ui operation's). After installation add the following in the /etc/mosquitto/mosquitto.conf and start it: mosquitto -c /etc/mosquitto/mosquitto.conf -d
+	<pre style= "white-space: pre-wrap; background: grey; width: 55%">
+	<font color="white">
+		listener 9001
+		protocol websockets
+		listener 1883
+		protocol mqtt
+	</font></pre>	
+ 	<li> install necessary python libraries (e.g., paho, prompt_toolkit)
+ 	<li> in the ui/dashboard.js setup the ip of your machine
+</ul>
 
 <h3>Console</h3>
 In what follows we present an example use of SENITY through the senity-console.
@@ -193,16 +206,12 @@ One can also use the UI to view the total consumption, the number of sites and d
 <img src="UI.png" alt="Senity UI">
 <br>
 
-<h2>Issues</h2>
+<h2>Known Issues</h2>
 <ul>
- <li> Installation procedures will be reconsidered, while a containirized version of SENITY is also in our plans.
- <li> Add device profiles, express consumption in mathematic way through a scripting like manner
- <li> In the OneToOne scenario all the software can be hosted in a container, that represents a house/site, utilizing the possibilities for creation of networks. This may also enable to put network delays etc.
- <li> Consider scalability issues and how to handle millions of houses. 10k container per server have been reported as an extreme case for containers. 
- <li> In oneToOne mode the device characteristics could be expressed through Yang \& configured through netconf.
+	<li> There is a limitation on the number of sites one can start, depending on the system where SENITY runs. 500 is around the maximum for a normal systems. This is due to the fact that each site is a different process.
+	<li> Sometimes after multiple initiations and terminations of SENITY, when you start SENITY a "[Errno 104] Connection reset by peer" msg appears though the normal functionallity still exists. This will be resolved.
+	<li> SENITY will not work well with multiple initiations of it, since there is a single communication bus (the mqqt broker).
 </ul>  
-
-<h2>Tasks</h2>
 
 <h2>Contact</h2>
 Panagiotis Kokkinos, kokkinop@gmail.com
