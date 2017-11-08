@@ -111,12 +111,7 @@ class allInOneSite:
         # Loop
         while 1:
            self.__runDevices()
-           if self.updateInterval != 0: 
-               time.sleep(self.updateInterval)
-           else:
-               # actually, waiting 10sec (again and again) till the TOPIC_SITE_CONF
-               # is received and the updateinterval is set centrally from the emulationManager 
-               time.sleep(10) 
+           time.sleep(self.updateInterval)
                       
 
 def startSite(mqtt_broker_ip, mqtt_broker_port, siteId) :
