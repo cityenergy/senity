@@ -1,4 +1,5 @@
 import emulationManager
+import simulationManager
 import uiWebServer
 
 import console
@@ -13,11 +14,13 @@ def parseArguments ():
 
     parser = argparse.ArgumentParser("senity")
     parser.add_argument('-c', nargs=1, help="The configuration file")
-    parser.add_argument('-s', nargs=1, help="The emulation scenario file")
+    parser.add_argument('-s', nargs=1, help="The emulation/simulation scenario file")
+    parser.add_argument('-simulation', action='store_true')
+    parser.set_defaults(simulation=False)
     args = parser.parse_args()
 
     try:
-        return args.c[0], args.s[0]
+        return args.c[0], args.s[0], args.simulation
     except Exception:
         parser.print_help()
         sys.exit(0)
@@ -54,26 +57,32 @@ def readConfiguration (conf_file):
 if __name__ == "__main__":
 
     # Read input parameters
-    (conf_file, scenario_file) = parseArguments()
+    (conf_file, scenario_file, simScenario) = parseArguments()
 
     # Read configuration
     devices_folder, sites_folder, mqtt_broker_ip, mqtt_broker_port, websocket_broker_port, log_file, console_cmd_waiting, enable_ui, web_port, base_dir = readConfiguration(conf_file)
 
-    # Start emulation Manager
-    emulManager = emulationManager.emulationManager()
-    emulManager.start(scenario_file, devices_folder, sites_folder, mqtt_broker_ip, mqtt_broker_port, websocket_broker_port, log_file)    
+    if (simScenario) :
+        # Start simulation Manager
+        simManager = simulationManager.simulationManager()
+        simManager.start(scenario_file, devices_folder, sites_folder, mqtt_broker_ip, mqtt_broker_port, websocket_broker_port, log_file)    
 
-    # Start web ui
-    if (enable_ui):
-        uiWeb = uiWebServer.uiWebServer(web_port, base_dir)
-        sp = multiprocessing.Process(target= uiWeb.start, args=())
-        sp.start()
+    else :
+        # Start emulation Manager
+        emulManager = emulationManager.emulationManager()
+        emulManager.start(scenario_file, devices_folder, sites_folder, mqtt_broker_ip, mqtt_broker_port, websocket_broker_port, log_file)    
 
-    # Start interactive console
-    senityConsole = console.console(mqtt_broker_ip, mqtt_broker_port, console_cmd_waiting)
-    senityConsole.start()	
+        # Start web ui
+        if (enable_ui):
+            uiWeb = uiWebServer.uiWebServer(web_port, base_dir)
+            sp = multiprocessing.Process(target= uiWeb.start, args=())
+            sp.start()
 
-    # Close emulation manager
-    emulManager.closeSenity()
-    if (enable_ui):
-        sp.terminate()
+        # Start interactive console
+        senityConsole = console.console(mqtt_broker_ip, mqtt_broker_port, console_cmd_waiting)
+        senityConsole.start()	
+
+        # Close emulation manager
+        emulManager.closeSenity()
+        if (enable_ui):
+            sp.terminate()

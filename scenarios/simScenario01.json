@@ -1,0 +1,12 @@
+{
+  "scenarioName": "scen01",
+  "simUpdateInterval": 1,
+  "updateInterval": 5,
+  "simDuration": 3600,
+  "simStartTime": 0,
+  "sitesAvailable": 
+  [ 
+    {"siteName": "site01", "siteCounter": 1 },
+    {"siteName": "site02", "siteCounter": 20 }
+  ]
+}

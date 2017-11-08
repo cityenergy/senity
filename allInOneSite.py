@@ -1,5 +1,8 @@
-# This script emulates the operation of a single site including the gateway,
-# the local demand response system (ldrms) - if any - and the associated devices.
+'''
+ This script emulates the operation of a single site including the gateway,
+ the local demand response system (ldrms) - if any - and the associated devices.
+'''
+
 import constants as con
 
 import sys
@@ -9,14 +12,6 @@ import logging
 import multiprocessing
 import random
 import time
-
-## mqtt broker settings
-#if len(sys.argv) < 2 :
-#    print "More inpurt paramters are required"
-#    sys.exit(0) 
-#else:
-#    mqtt_broker_ip = sys.argv[1] 
-#    mqtt_broker_port = 1883
 
 class allInOneSite:
 

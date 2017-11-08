@@ -16,7 +16,7 @@ $(document).ready(function() {
 // Connect, subscribe, handle msgs to/from mqtt broker
 function mqttSetup () {
 
-    var client = new Paho.MQTT.Client("127.0.0.1", 9001, "myclientid_" + parseInt(Math.random() * 100, 10));
+    var client = new Paho.MQTT.Client("147.102.16.119", 9001, "myclientid_" + parseInt(Math.random() * 100, 10));
     var clientConnected = false;
 
     // Gets  called if the websocket/mqtt connection gets disconnected for any reason
