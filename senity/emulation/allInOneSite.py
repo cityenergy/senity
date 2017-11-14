@@ -21,11 +21,14 @@ class allInOneSite:
         self.client = mqtt.Client()
         self.senityLogger = logging.getLogger("senity_allInOneSite")
         self.updateInterval = 0
+        self.siteConnected = False
 
     # The callback for when the self.client receives a CONNACK response from the mqtt broker
     def __on_connect(self, client, userdata, flags, rc):
 
         self.senityLogger.info("Site " + str(self.sId) + " connected on mqtt broker with result code: " + str(rc))
+
+        self.siteConnected = True
 
         # Subscribing in on_connect() means that if we lose the connection and
         # reconnect othen subscriptions will be renewed
@@ -76,7 +79,11 @@ class allInOneSite:
 
     # Run the devices
     def __runDevices (self):
-        
+      
+        # check if site is connected to mqtt broker 
+        if not self.siteConnected:
+            return
+
         siteConsumption = 0
         
         # Publish devices' consumption
@@ -93,9 +100,6 @@ class allInOneSite:
     def runSite (self, mqtt_broker_ip, mqtt_broker_port, siteId) :
 
         self.sId = siteId
-
-        # Run Scheduler
-        ch = logging.NullHandler()
 
         # Create, configure mqtt self.client and connect
         self.client.loop_start()

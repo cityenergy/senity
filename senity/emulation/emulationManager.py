@@ -4,9 +4,9 @@
 #import getSiteProfile
 import allInOneSite
 import constants as con
-import utils.getScenarioConf as getScen
-import utils.getDeviceProfile as getDev
-import utils.getSiteProfile as getSite
+import utils.getScenarioConf
+import utils.getDeviceProfile
+import utils.getSiteProfile
 
 
 import sys
@@ -47,16 +47,15 @@ class emulationManager:
         self.__initLogging()
 
         # read devices and sites profiles and emulation scenarion configuration
-        allDevices = getDeviceProfile.getAllDeviceProfiles(self.devices_folder)
         try:
-            allDevices = getDeviceProfile.getAllDeviceProfiles(self.devices_folder)
-            allSites = getSiteProfile.getAllSiteProfiles(self.sites_folder)
+            allDevices = utils.getDeviceProfile.getAllDeviceProfiles(self.devices_folder)
+            allSites = utils.getSiteProfile.getAllSiteProfiles(self.sites_folder)
         except Exception:
             self.senityLogger.error("Device and/or site profiles could not be loaded.")
             sys.exit(0)
 
         try:
-            (updateInterval, scenarioConf) = getScenarioConf.getScenarioConf(scenario_file)
+            (updateInterval, scenarioConf) = utils.getScenarioConf.getScenarioConf(scenario_file)
         except Exception:
             self.senityLogger.error("Scenario configuration could not be loaded.")
             sys.exit(0)
@@ -69,7 +68,7 @@ class emulationManager:
 
         # validate data and return sites configuration
         sitesConf = self.__validateFormatScenario(scenarioConf, allSites, allDevices)
-
+        
         # Create emulated "all in one" sites
         siteId = 0
         for site in sitesConf.keys():

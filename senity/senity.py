@@ -41,7 +41,7 @@ def readConfiguration (conf_file):
     mqtt_broker_port = config.get('General', 'mqtt_broker_port')
     websocket_broker_port = config.get('General', 'websocket_broker_port')
     log_file = config.get('General', 'log_file')
-    enable_ui = bool(config.get('Web', 'enable_ui'))
+    enable_ui = int(config.get('Web', 'enable_ui'))
     web_port = int(config.get('Web', 'web_port'))
     base_dir = config.get('Web', 'base_dir')
 
@@ -74,7 +74,7 @@ if __name__ == "__main__" and __package__ is None:
         emulManager.start(scenario_file, devices_folder, sites_folder, mqtt_broker_ip, mqtt_broker_port, websocket_broker_port, log_file)    
 
         # Start web ui
-        if (enable_ui):
+        if (enable_ui == 1):
             uiWeb = uiWebServer.uiWebServer(web_port, base_dir)
             sp = multiprocessing.Process(target= uiWeb.start, args=())
             sp.start()
