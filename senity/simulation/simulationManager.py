@@ -2,11 +2,11 @@
  The overall simulation Manager, which is responsible for starting and configuring the various entities
 '''
 
-import getScenarioConf
-import getDeviceProfile
-import getSiteProfile
 import simAllInOneSite
 import constants as con
+import utils.getScenarioConf
+import utils.getDeviceProfile
+import utils.getSiteProfile
 
 import sys
 import paho.mqtt.client as mqtt
@@ -49,14 +49,14 @@ class simulationManager:
 
         # read devices and sites profiles and simulation scenarion configuration
         try:
-            allDevices = getDeviceProfile.getAllDeviceProfiles(self.devices_folder)
-            allSites = getSiteProfile.getAllSiteProfiles(self.sites_folder)
+            allDevices = utils.getDeviceProfile.getAllDeviceProfiles(self.devices_folder)
+            allSites = utils.getSiteProfile.getAllSiteProfiles(self.sites_folder)
         except Exception:
             self.senityLogger.error("Device and/or site profiles could not be loaded.")
             sys.exit(0)
 
         try:
-            (deviceUpdateInterval, simUpdateInterval, simDuration, simStartTime,  scenarioConf) = getScenarioConf.getSimScenarioConf(scenario_file)
+            (deviceUpdateInterval, simUpdateInterval, simDuration, simStartTime,  scenarioConf) = utils.getScenarioConf.getSimScenarioConf(scenario_file)
         except Exception:
             self.senityLogger.error("Scenario configuration could not be loaded.")
             sys.exit(0)

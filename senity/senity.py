@@ -1,6 +1,6 @@
-import emulationManager
-import simulationManager
 import uiWebServer
+import simulation.simulationManager as sim
+import emulation.emulationManager as emu
 
 import console
 import socket
@@ -54,7 +54,8 @@ def readConfiguration (conf_file):
 
     return devices_folder, sites_folder, mqtt_broker_ip, mqtt_broker_port, websocket_broker_port, log_file, console_cmd_waiting, enable_ui, web_port, base_dir
 
-if __name__ == "__main__":
+if __name__ == "__main__" and __package__ is None:
+    __package__ = "senity"
 
     # Read input parameters
     (conf_file, scenario_file, simScenario) = parseArguments()
@@ -64,12 +65,12 @@ if __name__ == "__main__":
 
     if (simScenario) :
         # Start simulation Manager
-        simManager = simulationManager.simulationManager()
+        simManager = sim.simulationManager()
         simManager.start(scenario_file, devices_folder, sites_folder, mqtt_broker_ip, mqtt_broker_port, websocket_broker_port, log_file)    
 
     else :
         # Start emulation Manager
-        emulManager = emulationManager.emulationManager()
+        emulManager = emu.emulationManager()
         emulManager.start(scenario_file, devices_folder, sites_folder, mqtt_broker_ip, mqtt_broker_port, websocket_broker_port, log_file)    
 
         # Start web ui

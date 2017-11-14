@@ -1,9 +1,13 @@
 # The overall emulation Manager, which is responsible for starting and configuring the various entities
-import getScenarioConf
-import getDeviceProfile
-import getSiteProfile
+#import getScenarioConf
+#import getDeviceProfile
+#import getSiteProfile
 import allInOneSite
 import constants as con
+import utils.getScenarioConf as getScen
+import utils.getDeviceProfile as getDev
+import utils.getSiteProfile as getSite
+
 
 import sys
 import paho.mqtt.client as mqtt
@@ -43,6 +47,7 @@ class emulationManager:
         self.__initLogging()
 
         # read devices and sites profiles and emulation scenarion configuration
+        allDevices = getDeviceProfile.getAllDeviceProfiles(self.devices_folder)
         try:
             allDevices = getDeviceProfile.getAllDeviceProfiles(self.devices_folder)
             allSites = getSiteProfile.getAllSiteProfiles(self.sites_folder)
