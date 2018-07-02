@@ -74,11 +74,17 @@ class emulationManager:
         for site in sitesConf.keys():
             sp = multiprocessing.Process(target=allInOneSite.startSite, args=(self.mqtt_broker_ip, self.mqtt_broker_port, siteId))
             self.siteProcs.append(sp)
+            siteId = siteId + 1
             sp.start()
+
+        time.sleep(5)
+        siteId = 0
+        for site in sitesConf.keys():
             self.commBusClient.publish(con.TOPIC_SITE_DEVICES_CONF + "/" + str(siteId), str(sitesConf[site]), retain=True)
             self.commBusClient.publish(con.TOPIC_SITE_CONF + "/" + str(siteId), str(updateInterval), retain=True)
             self.siteIds.append(siteId)
             siteId = siteId + 1
+
 
     # Init logging functionallity
     def __initLogging (self):
