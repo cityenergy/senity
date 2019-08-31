@@ -1,0 +1,377 @@
+module senity-washing-machine {
+	
+	namespace "https://github.com/cityenergy/senity/washing-machine";
+	prefix senity-wm;
+
+	import ietf-yang-types {
+		prefix yang;
+	}
+
+	import ietf-inet-types {
+	    prefix inet;
+	}
+	organization "Senity";
+	contact "kseklou@uop.gr";
+	description "Module describing a smart washing machine";
+	revision 2019-08-07 {
+		description "Initial version.";
+	}
+
+
+	//////////////////////////////
+	// Type definitions (typedef)
+    //////////////////////////////
+
+	typedef washing_cycle_status {
+		type enumeration {
+			enum NOT_STARTED;
+			enum RUNNING;
+			enum PAUSED;
+			enum SCHEDULED;
+			enum FINISHED;
+		}
+		description "Status of washing cycle";
+	}
+
+	typedef washing_machine_module {
+		type enumeration {
+			enum MODULE_A;
+			enum MODULE_B;
+		}
+		description "The modules of a washing machine";	
+	}
+
+	typedef washing_cycle_temperature {
+		type uint16 {
+			range "30 .. 90";
+		}
+	}
+
+	typedef operation_result {
+		type enumeration {
+			enum SUCCESS;
+			enum ERROR;
+		}
+		description "Result of operation applied to appliance";
+	}
+
+	typedef percent {
+		type uint16 {
+			range "0 .. 100";
+		}
+		description "Percentage";
+	}
+
+
+	////////////////////
+	// Lists
+	////////////////////
+
+	list error {
+		key error_code;
+		leaf error_code {
+    		type string;
+    	}
+
+    	leaf module {
+    		type washing_machine_module;
+    	}
+    	
+	}
+
+
+	///////////////////////
+	// Groupings
+	//////////////////////
+
+	grouping washing_machine_profile {
+
+		leaf manufacturer {
+			type string;
+			mandatory true;
+			config false;
+		} 
+		
+		leaf type {
+			type string;
+			mandatory true;
+			config false;
+		}
+		
+		leaf software_version {
+			type string;
+			mandatory true;
+			config false;
+		}
+		
+		leaf washing_machine_id {
+			type string;
+			mandatory true;
+		}
+
+	}
+
+    grouping sensors_readings {
+
+    	leaf external_temperature {
+    		type int32;
+    		units degrees-celsius;
+    		config false;
+    		description "The external temperature sensor's reading";	
+    	}	
+
+    	leaf internal_temperature {
+    		type int32;
+    		units degrees-celsius;
+    		config false;
+    		description "The internal internal sensor's reading";	
+    	}
+
+    	leaf door_status {
+    		type boolean;
+    		config false;
+    		description "Indicates whether the appliance's door is open";
+    	}
+
+    	leaf water_status {
+    		type boolean;
+    		config false;
+    		description "Indicates the availability of water";
+    	}
+
+    	leaf detergent_status {
+    		type boolean;
+    		config false;
+    		description "Indicates the availability of detergent";
+    	}
+
+    	leaf softener_status {
+    		type boolean;
+    		config false;
+    		description "Indicates the availability of softener";
+    	}
+    }
+
+    grouping user_preferences {
+
+    	leaf finish_time {
+			type yang:date-and-time;
+			config true;
+			description "The time by which the current washing cycle should finish";
+		}
+    }
+
+	grouping current_cycle {
+
+		leaf selected_cycle {
+ 			type leafref {
+ 				path "/senity-wm:washing_machine/senity-wm:washing_program/senity-wm:program_id";
+ 			}
+			mandatory true;
+ 		}
+
+		leaf status {
+			type washing_cycle_status;
+			mandatory true;
+			config false;
+		} 
+
+		leaf percent_completed {
+			type percent;
+			config false;
+			description "The current working cycle complition percentage";		
+		}
+
+		leaf start_time {
+			type yang:date-and-time;
+			config false;
+			description "The current working cycle start time";
+		}
+
+		leaf remaining_time {
+			type yang:date-and-time;
+			config false;
+			description "The current working cycle remaining time";
+		}
+
+		leaf scheduled_time {
+			type yang:date-and-time;
+			config true;
+			description "The scheduled time when the washing cycle will start";
+		}
+
+	}
+
+	grouping statistics {
+	    
+	    leaf washing_cycles_performed {
+    		type int32;
+    		config false;
+    		description "The number of washing cycles performed";	
+    	}
+
+    	leaf washing_cycles_per_day {
+    		type int32;
+    		config false;
+    		description "The average washing cycles per day";	
+    	}
+
+    	leaf washing_cycles_duration {
+    		type int32;
+    		config false;
+    		description "The average duration of a washing cycle";	
+    	}
+
+    	leaf energy_consumption_per_cycle {
+    		type int32;
+    		units watt;
+    		config false;
+    		description "The average energy consumption per cycle";	
+    	}
+
+    	leaf energy_consumption_current_cycle {
+    		type int32;
+    		units watt;
+    		config false;
+    		description "The average energy consumption of the current working cycle";	
+    	}
+    	
+	}
+
+	grouping networking {
+
+		leaf address {
+			type inet:ipv4-address;
+			description "Appliance IP address";
+		}
+
+		leaf port {
+			type inet:port-number;
+			description "Appliance port number";
+		}
+	}
+
+
+	/////////////////////
+	// Containers
+	/////////////////////
+	container washing_machine {
+		list washing_program {
+			key program_id;
+			leaf program_id {
+	    		type int32;
+	    	}
+	    	
+	    	leaf temperature {
+	    		type washing_cycle_temperature;
+	    	}	
+
+	    	leaf softener {
+	    		type boolean;
+	    	}
+
+	    	leaf prewash {
+	    		type boolean;
+	    	}
+
+	    	leaf cycle_duration {
+	    		type int32;
+	    	}
+
+	    	leaf spin_speed {
+	    		type int32;    	
+	    	}
+		}
+		
+		container diagnostics {
+			uses sensors_readings;
+		}
+
+		container operations {
+			uses statistics;
+			uses current_cycle;
+			uses washing_machine_profile;
+		}
+
+		container settings {
+			uses networking;
+			uses user_preferences;
+		}
+	}
+
+
+	/////////////////////////////
+	// RPC for washing machines
+	/////////////////////////////
+
+	rpc set_washing_machine_status {
+		input {
+			leaf status {
+				type washing_cycle_status;
+			}
+		}
+		output {
+			leaf result {
+				type operation_result;
+			}
+		}
+	}
+
+	rpc self_diagnosis_tests {
+		input {
+			leaf module {
+				type washing_machine_module;
+			}
+		}
+		output {
+			leaf diagnosis_result {
+				type string;
+			}
+		}
+	}
+
+	rpc amazon_alexa_spell {
+		input {
+			leaf command {
+				type string;
+			}
+		}
+		output {
+			leaf result {
+				type operation_result;
+			}
+		}
+
+	}
+
+
+	///////////////////////////
+	// Notifications
+	//////////////////////////
+	
+	notification washing_cycle_completed {
+		description "Notification when the washing cycle has been completed";
+		leaf washing_machine_id {
+ 			type leafref {
+ 				path "/senity-wm:washing_machine/senity-wm:operations/senity-wm:washing_machine_id";
+ 			}
+
+		}
+	}
+
+	notification washing_machine_error {
+		description "Notification when an error has occured";
+		leaf washing_machine_id {
+ 			type leafref {
+ 				path "/senity-wm:washing_machine/senity-wm:operations/senity-wm:washing_machine_id";
+ 			}
+		}
+
+		leaf error {
+ 			type leafref {
+ 				path "/error/error_code";
+ 			}
+		}
+	}
+
+}
